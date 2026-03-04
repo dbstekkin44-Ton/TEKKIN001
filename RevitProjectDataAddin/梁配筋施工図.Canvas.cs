@@ -1002,6 +1002,7 @@ namespace RevitProjectDataAddin
             public double BaseX2;
             public double X1;
             public double X2;
+            public bool IsEqualCutChild;
         }
 
         private readonly Dictionary<GridBotsecozu, Dictionary<OrangeSegKey, OrangeSegOverride>> _orangeSegOverrides
@@ -1156,7 +1157,8 @@ namespace RevitProjectDataAddin
                 BaseX1 = baseX1,
                 BaseX2 = baseX2,
                 X1 = x1,
-                X2 = x2
+                X2 = x2,
+                IsEqualCutChild = depth > 0
             });
         }
 
@@ -1174,6 +1176,20 @@ namespace RevitProjectDataAddin
 
             bool hasLeftAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, out var leftAnkaSigned);
             bool hasRightAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, out var rightAnkaSigned);
+
+            if (TryGetOrangeSegInfo(owner, segKey, out var segInfo))
+            {
+                if (!hasLeftAnka && segInfo.HitLeftAnka)
+                {
+                    hasLeftAnka = Math.Abs(segInfo.DefaultLeftAnkaSigned) > 0.0001;
+                    leftAnkaSigned = segInfo.DefaultLeftAnkaSigned;
+                }
+                if (!hasRightAnka && segInfo.HitRightAnka)
+                {
+                    hasRightAnka = Math.Abs(segInfo.DefaultRightAnkaSigned) > 0.0001;
+                    rightAnkaSigned = segInfo.DefaultRightAnkaSigned;
+                }
+            }
 
             var cuts = new List<double>(segmentCount - 1);
             double d = length / segmentCount;
@@ -4475,6 +4491,7 @@ namespace RevitProjectDataAddin
                 double leftAnkaSigned, double rightAnkaSigned,
                 bool textAboveLine, // true: chữ nằm phía trên thanh cam
                 double baseX1, double baseX2,
+                bool suppressAnkaInTopLength = false,
                 int rowIndex = 0    // ✅ optional để không bắt buộc sửa tất cả nơi gọi
             )
             {
@@ -4496,13 +4513,10 @@ namespace RevitProjectDataAddin
                 bool hasLeftAnka = Math.Abs(leftAnkaSigned) > 0.0001;
                 bool hasRightAnka = Math.Abs(rightAnkaSigned) > 0.0001;
 
-                bool isCutSegment = IsEqualCutMarker(owner, rowIndex, x1, y)
-                                    || IsEqualCutMarker(owner, rowIndex, x2, y);
-
-                double ankaAdd = isCutSegment
-                    ? 0.0
-                    : (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
-                      (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
+                double ankaAdd =
+                    (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
+                    (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
+                if (suppressAnkaInTopLength) ankaAdd = 0.0;
 
                 // Text TOP
                 double wxTop = cx;
@@ -6436,7 +6450,9 @@ namespace RevitProjectDataAddin
                             diaMidArr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
                         );
                     }
                 }
@@ -6782,7 +6798,9 @@ namespace RevitProjectDataAddin
                             diaMidChu1Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7089,7 +7107,9 @@ namespace RevitProjectDataAddin
                             diaMidChu2Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7403,7 +7423,9 @@ namespace RevitProjectDataAddin
                             diaMidShitaChu2Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7716,7 +7738,9 @@ namespace RevitProjectDataAddin
                             diaMidShitaChu1Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -8097,7 +8121,9 @@ namespace RevitProjectDataAddin
                                 diaMidShitaArr, spanLeftArr, spanRightArr, spanCount,
                                 defaultLeftSigned, defaultRightSigned,
                                 leftSigned, rightSigned,
-                                /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                                /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                             );
                         }
