@@ -1211,6 +1211,9 @@ namespace RevitProjectDataAddin
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
 
+            // 保持: 等分切断の外端(右端)にもドット判定を残す
+            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+
             if (cuts.Count > 0)
             {
                 double firstRight = cuts[0];
@@ -4590,6 +4593,11 @@ namespace RevitProjectDataAddin
                 if (IsEqualCutMarker(owner, rowIndex, x1, y))
                 {
                     DrawDotMm_Rec(cvs, tr, owner, x1, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
+                }
+
+                if (IsEqualCutMarker(owner, rowIndex, x2, y))
+                {
+                    DrawDotMm_Rec(cvs, tr, owner, x2, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
                 }
             }
 
