@@ -1002,6 +1002,7 @@ namespace RevitProjectDataAddin
             public double BaseX2;
             public double X1;
             public double X2;
+            public bool IsEqualCutChild;
         }
 
         private readonly Dictionary<GridBotsecozu, Dictionary<OrangeSegKey, OrangeSegOverride>> _orangeSegOverrides
@@ -1156,7 +1157,8 @@ namespace RevitProjectDataAddin
                 BaseX1 = baseX1,
                 BaseX2 = baseX2,
                 X1 = x1,
-                X2 = x2
+                X2 = x2,
+                IsEqualCutChild = depth > 0
             });
         }
 
@@ -1174,6 +1176,20 @@ namespace RevitProjectDataAddin
 
             bool hasLeftAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, out var leftAnkaSigned);
             bool hasRightAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, out var rightAnkaSigned);
+
+            if (TryGetOrangeSegInfo(owner, segKey, out var segInfo))
+            {
+                if (!hasLeftAnka && segInfo.HitLeftAnka)
+                {
+                    hasLeftAnka = Math.Abs(segInfo.DefaultLeftAnkaSigned) > 0.0001;
+                    leftAnkaSigned = segInfo.DefaultLeftAnkaSigned;
+                }
+                if (!hasRightAnka && segInfo.HitRightAnka)
+                {
+                    hasRightAnka = Math.Abs(segInfo.DefaultRightAnkaSigned) > 0.0001;
+                    rightAnkaSigned = segInfo.DefaultRightAnkaSigned;
+                }
+            }
 
             var cuts = new List<double>(segmentCount - 1);
             double d = length / segmentCount;
@@ -1194,6 +1210,9 @@ namespace RevitProjectDataAddin
             }
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
+
+            // 保持: 等分切断の外端(右端)にもドット判定を残す
+            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1494,6 +1513,19 @@ namespace RevitProjectDataAddin
                     _deletedOrangeSegs[owner] = set;
                 }
                 if (set.Add(info.SegKey)) changed = true;
+
+                // 2a-2) remove equal-cut dot markers at deleted segment boundaries
+                if (_orangeSegCutMarkers.TryGetValue(owner, out var cutMarkers) && cutMarkers != null)
+                {
+                    double y = info.SegKey.Y_10 / 10.0;
+                    double x1 = info.SegKey.X1_10 / 10.0;
+                    double x2 = info.SegKey.X2_10 / 10.0;
+
+                    if (cutMarkers.Remove(new OrangeCutPointKey(info.SegKey.RowIndex, x1, y)))
+                        changed = true;
+                    if (cutMarkers.Remove(new OrangeCutPointKey(info.SegKey.RowIndex, x2, y)))
+                        changed = true;
+                }
 
                 // 2b) clear TOP/BOTTOM override (nếu có)
                 if (!clickedKey.Equals(info.TopKey))
@@ -4476,6 +4508,7 @@ namespace RevitProjectDataAddin
                 double leftAnkaSigned, double rightAnkaSigned,
                 bool textAboveLine, // true: chữ nằm phía trên thanh cam
                 double baseX1, double baseX2,
+                bool suppressAnkaInTopLength = false,
                 int rowIndex = 0    // ✅ optional để không bắt buộc sửa tất cả nơi gọi
             )
             {
@@ -4500,6 +4533,7 @@ namespace RevitProjectDataAddin
                 double ankaAdd =
                     (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
                     (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
+                if (suppressAnkaInTopLength) ankaAdd = 0.0;
 
                 // Text TOP
                 double wxTop = cx;
@@ -4573,6 +4607,11 @@ namespace RevitProjectDataAddin
                 if (IsEqualCutMarker(owner, rowIndex, x1, y))
                 {
                     DrawDotMm_Rec(cvs, tr, owner, x1, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
+                }
+
+                if (IsEqualCutMarker(owner, rowIndex, x2, y))
+                {
+                    DrawDotMm_Rec(cvs, tr, owner, x2, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
                 }
             }
 
@@ -6433,7 +6472,9 @@ namespace RevitProjectDataAddin
                             diaMidArr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
                         );
                     }
                 }
@@ -6779,7 +6820,9 @@ namespace RevitProjectDataAddin
                             diaMidChu1Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7086,7 +7129,9 @@ namespace RevitProjectDataAddin
                             diaMidChu2Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7400,7 +7445,9 @@ namespace RevitProjectDataAddin
                             diaMidShitaChu2Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -7713,7 +7760,9 @@ namespace RevitProjectDataAddin
                             diaMidShitaChu1Arr, spanLeftArr, spanRightArr, spanCount,
                             defaultLeftSigned, defaultRightSigned,
                             leftSigned, rightSigned,
-                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                            /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                         );
                     }
@@ -8094,7 +8143,9 @@ namespace RevitProjectDataAddin
                                 diaMidShitaArr, spanLeftArr, spanRightArr, spanCount,
                                 defaultLeftSigned, defaultRightSigned,
                                 leftSigned, rightSigned,
-                                /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2, kRow
+                                /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
+                                suppressAnkaInTopLength: seg.IsEqualCutChild,
+                                rowIndex: kRow
 
                             );
                         }
