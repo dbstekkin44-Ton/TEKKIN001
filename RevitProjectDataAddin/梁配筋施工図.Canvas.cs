@@ -1238,6 +1238,110 @@ namespace RevitProjectDataAddin
             return true;
         }
 
+        private bool ApplyCustomCutToOrangeSegment(
+            GridBotsecozu owner,
+            OrangeDimTextKey dimKey,
+            List<double> userLengths,
+            bool applyFromLeft)
+        {
+            if (owner == null || userLengths == null || userLengths.Count < 2) return false;
+            if (!TryGetSegKeyForDimKey(owner, dimKey, out var segKey)) return false;
+
+            double baseX1 = segKey.X1_10 / 10.0;
+            double baseX2 = segKey.X2_10 / 10.0;
+            double y = segKey.Y_10 / 10.0;
+            var (x1, x2) = GetOrangeSegOverride(owner, segKey, baseX1, baseX2);
+            double totalLen = x2 - x1;
+            if (totalLen <= 1e-6) return false;
+
+            double sum = 0.0;
+            for (int i = 0; i < userLengths.Count; i++)
+            {
+                if (!(userLengths[i] > 1e-6)) return false;
+                sum += userLengths[i];
+            }
+            if (Math.Abs(sum - totalLen) > 1.0) return false;
+
+            bool hasLeftAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, out var leftAnkaSigned);
+            bool hasRightAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, out var rightAnkaSigned);
+
+            if (TryGetOrangeSegInfo(owner, segKey, out var segInfo))
+            {
+                if (!hasLeftAnka && segInfo.HitLeftAnka)
+                {
+                    hasLeftAnka = Math.Abs(segInfo.DefaultLeftAnkaSigned) > 0.0001;
+                    leftAnkaSigned = segInfo.DefaultLeftAnkaSigned;
+                }
+                if (!hasRightAnka && segInfo.HitRightAnka)
+                {
+                    hasRightAnka = Math.Abs(segInfo.DefaultRightAnkaSigned) > 0.0001;
+                    rightAnkaSigned = segInfo.DefaultRightAnkaSigned;
+                }
+            }
+
+            var cuts = new List<double>(Math.Max(0, userLengths.Count - 1));
+            if (applyFromLeft)
+            {
+                double cur = x1;
+                for (int i = 0; i < userLengths.Count - 1; i++)
+                {
+                    cur += userLengths[i];
+                    if (cur > x1 + 1e-6 && cur < x2 - 1e-6)
+                        cuts.Add(cur);
+                }
+            }
+            else
+            {
+                double cur = x2;
+                for (int i = 0; i < userLengths.Count - 1; i++)
+                {
+                    cur -= userLengths[i];
+                    if (cur > x1 + 1e-6 && cur < x2 - 1e-6)
+                        cuts.Add(cur);
+                }
+                cuts.Sort();
+            }
+
+            if (!_orangeSegEqualCutPoints.TryGetValue(owner, out var ownerCuts) || ownerCuts == null)
+            {
+                ownerCuts = new Dictionary<OrangeSegKey, List<double>>();
+                _orangeSegEqualCutPoints[owner] = ownerCuts;
+            }
+            ownerCuts[segKey] = cuts;
+
+            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
+            {
+                markers = new HashSet<OrangeCutPointKey>();
+                _orangeSegCutMarkers[owner] = markers;
+            }
+            foreach (var cp in cuts)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
+            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+
+            if (cuts.Count > 0)
+            {
+                double firstRight = cuts[0];
+                double lastLeft = cuts[cuts.Count - 1];
+
+                var firstChild = new OrangeSegKey(segKey.RowIndex, x1, firstRight, y);
+                var lastChild = new OrangeSegKey(segKey.RowIndex, lastLeft, x2, y);
+
+                if (hasLeftAnka)
+                {
+                    SetAnkaOverrideBySegKey(owner, firstChild, AnkaSide.Left, leftAnkaSigned);
+                    SetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, 0.0);
+                }
+
+                if (hasRightAnka)
+                {
+                    SetAnkaOverrideBySegKey(owner, lastChild, AnkaSide.Right, rightAnkaSigned);
+                    SetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, 0.0);
+                }
+            }
+
+            return true;
+        }
+
         private bool IsEqualCutMarker(GridBotsecozu owner, int rowIndex, double x, double y)
         {
             if (owner == null) return false;
@@ -2968,6 +3072,15 @@ namespace RevitProjectDataAddin
                 {
                     if (cutDetailPop != null) cutDetailPop.IsOpen = false;
 
+                    if (segments < 2) return;
+                    if (!TryGetSegKeyForDimKey(owner, key, out var segKey)) return;
+
+                    double baseX1 = segKey.X1_10 / 10.0;
+                    double baseX2 = segKey.X2_10 / 10.0;
+                    var (segX1, segX2) = GetOrangeSegOverride(owner, segKey, baseX1, baseX2);
+                    double totalLength = segX2 - segX1;
+                    if (totalLength <= 1e-6) return;
+
                     cutDetailPop = new System.Windows.Controls.Primitives.Popup
                     {
                         PlacementTarget = placementTarget,
@@ -2978,14 +3091,38 @@ namespace RevitProjectDataAddin
                         StaysOpen = true
                     };
 
-                    var root = new StackPanel { Orientation = Orientation.Vertical };
+                    var root = new StackPanel { Orientation = Orientation.Vertical, MinWidth = 260 };
+                    var dirRow = new StackPanel
+                    {
+                        Orientation = Orientation.Horizontal,
+                        Margin = new Thickness(10, 6, 10, 6)
+                    };
+                    dirRow.Children.Add(new TextBlock
+                    {
+                        Text = "方向",
+                        Width = 60,
+                        VerticalAlignment = VerticalAlignment.Center
+                    });
+
+                    var cmbDirection = new ComboBox
+                    {
+                        Width = 160,
+                        ItemsSource = new[] { "左→右", "右→左" },
+                        SelectedIndex = 0
+                    };
+                    dirRow.Children.Add(cmbDirection);
+                    root.Children.Add(WithRowDivider(dirRow));
+
+                    var inputBoxes = new List<TextBox>();
+                    var autoBoxes = new List<TextBox>();
+
                     for (int i = 1; i <= segments; i++)
                     {
                         var row = new StackPanel
                         {
                             Orientation = Orientation.Horizontal,
                             Margin = new Thickness(10, 6, 10, 6),
-                            MinWidth = 160
+                            MinWidth = 220
                         };
 
                         row.Children.Add(new TextBlock
@@ -2995,21 +3132,151 @@ namespace RevitProjectDataAddin
                             VerticalAlignment = VerticalAlignment.Center
                         });
 
-                        row.Children.Add(new TextBox
+                        var box = new TextBox
                         {
                             Width = 110,
                             VerticalContentAlignment = VerticalAlignment.Center,
                             Padding = new Thickness(2, 0, 2, 0)
-                        });
+                        };
 
+                        if (i < segments)
+                        {
+                            inputBoxes.Add(box);
+                        }
+                        else
+                        {
+                            box.IsReadOnly = true;
+                            box.Background = Brushes.WhiteSmoke;
+                            autoBoxes.Add(box);
+                        }
+
+                        row.Children.Add(box);
                         root.Children.Add(WithRowDivider(row));
                     }
+
+                    var txtError = new TextBlock
+                    {
+                        Margin = new Thickness(10, 6, 10, 6),
+                        Foreground = Brushes.Red,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    root.Children.Add(WithRowDivider(txtError));
+
+                    var btnApply = new Button
+                    {
+                        Content = "OK",
+                        Margin = new Thickness(10, 6, 10, 8),
+                        MinWidth = 80,
+                        HorizontalAlignment = HorizontalAlignment.Right
+                    };
+                    root.Children.Add(btnApply);
+
+                    bool TryParsePositiveLength(string text, out double value)
+                    {
+                        value = 0;
+                        var t = (text ?? string.Empty).Trim();
+                        if (string.IsNullOrWhiteSpace(t)) return false;
+                        if (!double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                            && !double.TryParse(t, NumberStyles.Float, CultureInfo.CurrentCulture, out value)
+                            && !double.TryParse(t, out value))
+                            return false;
+                        return value > 0;
+                    }
+
+                    bool ValidateAndPreview(out List<double> lengths)
+                    {
+                        lengths = new List<double>(segments);
+
+                        double sumInput = 0.0;
+                        for (int i = 0; i < inputBoxes.Count; i++)
+                        {
+                            if (!TryParsePositiveLength(inputBoxes[i].Text, out var len))
+                            {
+                                txtError.Text = $"{i + 1}段目は正の数で入力してください。";
+                                foreach (var ab in autoBoxes) ab.Text = string.Empty;
+                                btnApply.IsEnabled = false;
+                                return false;
+                            }
+                            sumInput += len;
+                            lengths.Add(len);
+                        }
+
+                        if (sumInput >= totalLength - 1e-6)
+                        {
+                            txtError.Text = "入力合計は元の長さ未満である必要があります。";
+                            foreach (var ab in autoBoxes) ab.Text = string.Empty;
+                            btnApply.IsEnabled = false;
+                            return false;
+                        }
+
+                        double lastLen = totalLength - sumInput;
+                        if (lastLen <= 1e-6)
+                        {
+                            txtError.Text = "最後の段長が0以下です。";
+                            foreach (var ab in autoBoxes) ab.Text = string.Empty;
+                            btnApply.IsEnabled = false;
+                            return false;
+                        }
+
+                        lengths.Add(lastLen);
+                        foreach (var ab in autoBoxes)
+                            ab.Text = lastLen.ToString("0.###", CultureInfo.InvariantCulture);
+
+                        txtError.Text = string.Empty;
+                        btnApply.IsEnabled = true;
+                        return true;
+                    }
+
+                    void RefreshValidation()
+                    {
+                        ValidateAndPreview(out _);
+                    }
+
+                    foreach (var box in inputBoxes)
+                    {
+                        box.TextChanged += (_, __) => RefreshValidation();
+                        box.KeyDown += (_, ee) =>
+                        {
+                            if (ee.Key == Key.Enter)
+                            {
+                                if (ValidateAndPreview(out var lengths))
+                                {
+                                    bool leftToRight = cmbDirection.SelectedIndex != 1;
+                                    if (ApplyCustomCutToOrangeSegment(owner, key, lengths, leftToRight))
+                                    {
+                                        CloseAll();
+                                        Redraw(canvas, owner);
+                                    }
+                                }
+                                ee.Handled = true;
+                            }
+                        };
+                    }
+
+                    btnApply.Click += (_, __) =>
+                    {
+                        if (!ValidateAndPreview(out var lengths)) return;
+
+                        bool leftToRight = cmbDirection.SelectedIndex != 1;
+                        if (ApplyCustomCutToOrangeSegment(owner, key, lengths, leftToRight))
+                        {
+                            CloseAll();
+                            Redraw(canvas, owner);
+                        }
+                    };
+
+                    RefreshValidation();
 
                     cutDetailPop.Child = WrapBox(root);
 
                     placementTarget.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         cutDetailPop.IsOpen = true;
+                        if (inputBoxes.Count > 0)
+                        {
+                            inputBoxes[0].Focus();
+                            inputBoxes[0].SelectAll();
+                        }
                     }), DispatcherPriority.Input);
                 }
 
@@ -3060,7 +3327,7 @@ namespace RevitProjectDataAddin
                     void TryOpenCustomDetail()
                     {
                         if (!isCustom) return;
-                        if (TryParsePositiveInt(txtSegments.Text, out int n))
+                        if (TryParsePositiveInt(txtSegments.Text, out int n) && n >= 2)
                             OpenCutDetailPopup(txtSegments, n);
                         else if (cutDetailPop != null)
                             cutDetailPop.IsOpen = false;
