@@ -4775,13 +4775,14 @@ namespace RevitProjectDataAddin
                 bool textAboveLine, // true: chữ nằm phía trên thanh cam
                 double baseX1, double baseX2,
                 bool suppressAnkaInTopLength = false,
+                bool forceShowForCutChild = false,
                 int rowIndex = 0    // ✅ optional để không bắt buộc sửa tất cả nơi gọi
             )
             {
                 if (!ShowOrangeDims) return;
 
                 double baseLen = (x2 - x1);
-                if (baseLen < MinDimLen) return;
+                if (baseLen < MinDimLen && !forceShowForCutChild) return;
 
                 double cx = 0.5 * (x1 + x2);
                 int si = FindSpanIndexByX(cx, spanLeftArrLocal, spanRightArrLocal, spanCountLocal);
@@ -6740,6 +6741,7 @@ namespace RevitProjectDataAddin
                             leftSigned, rightSigned,
                             /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
                         );
                     }
@@ -7088,6 +7090,7 @@ namespace RevitProjectDataAddin
                             leftSigned, rightSigned,
                             /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
 
                         );
@@ -7397,6 +7400,7 @@ namespace RevitProjectDataAddin
                             leftSigned, rightSigned,
                             /*textAboveLine*/ true, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
 
                         );
@@ -7713,6 +7717,7 @@ namespace RevitProjectDataAddin
                             leftSigned, rightSigned,
                             /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
 
                         );
@@ -8028,6 +8033,7 @@ namespace RevitProjectDataAddin
                             leftSigned, rightSigned,
                             /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
 
                         );
@@ -8411,6 +8417,7 @@ namespace RevitProjectDataAddin
                                 leftSigned, rightSigned,
                                 /*textAboveLine*/ false, seg.BaseX1, seg.BaseX2,
                                 suppressAnkaInTopLength: seg.IsEqualCutChild,
+                            forceShowForCutChild: seg.IsEqualCutChild,
                                 rowIndex: kRow
 
                             );
