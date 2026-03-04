@@ -1447,18 +1447,17 @@ namespace RevitProjectDataAddin
 
             // NOTE:
             // segX1/segX2 có thể đã bị dịch nhẹ (rounding / tonari shift) sau khi 等分切断,
-            // nên nếu so trực tiếp với vị trí ANKA global có thể trượt tolerance và làm mất ANKA biên.
-            // Ưu tiên so theo tọa độ gốc của segment (segKey) để giữ ANKA ở 2 đầu ngoài cùng.
+            // nhưng baseX1/baseX2 (segKey) cũng có thể đã là tọa độ sau dịch trong một số luồng merge.
+            // Vì vậy cần chấp nhận trúng biên theo CẢ base và seg thực tế để tránh mất ANKA biên.
             double baseX1 = segKey.X1_10 / 10.0;
             double baseX2 = segKey.X2_10 / 10.0;
-            double hitX1 = baseX1;
-            double hitX2 = baseX2;
+            bool nearLeftBase = !double.IsNaN(baseX1) && !double.IsInfinity(baseX1) && Near(baseX1, leftAnkaX, 0.5);
+            bool nearRightBase = !double.IsNaN(baseX2) && !double.IsInfinity(baseX2) && Near(baseX2, rightAnkaX, 0.5);
+            bool nearLeftSeg = !double.IsNaN(segX1) && !double.IsInfinity(segX1) && Near(segX1, leftAnkaX, 0.5);
+            bool nearRightSeg = !double.IsNaN(segX2) && !double.IsInfinity(segX2) && Near(segX2, rightAnkaX, 0.5);
 
-            if (double.IsNaN(hitX1) || double.IsInfinity(hitX1)) hitX1 = segX1;
-            if (double.IsNaN(hitX2) || double.IsInfinity(hitX2)) hitX2 = segX2;
-
-            hitLeft = hasLeftAnka && Near(hitX1, leftAnkaX, 0.5);
-            hitRight = hasRightAnka && Near(hitX2, rightAnkaX, 0.5);
+            hitLeft = hasLeftAnka && (nearLeftBase || nearLeftSeg);
+            hitRight = hasRightAnka && (nearRightBase || nearRightSeg);
             defaultLeftSigned = hitLeft ? fallbackLeftSigned : 0.0;
             defaultRightSigned = hitRight ? fallbackRightSigned : 0.0;
         }
@@ -4497,9 +4496,13 @@ namespace RevitProjectDataAddin
                 bool hasLeftAnka = Math.Abs(leftAnkaSigned) > 0.0001;
                 bool hasRightAnka = Math.Abs(rightAnkaSigned) > 0.0001;
 
-                double ankaAdd =
-                    (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
-                    (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
+                bool isCutSegment = IsEqualCutMarker(owner, rowIndex, x1, y)
+                                    || IsEqualCutMarker(owner, rowIndex, x2, y);
+
+                double ankaAdd = isCutSegment
+                    ? 0.0
+                    : (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
+                      (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
 
                 // Text TOP
                 double wxTop = cx;
