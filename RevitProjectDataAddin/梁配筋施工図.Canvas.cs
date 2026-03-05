@@ -3524,6 +3524,14 @@ namespace RevitProjectDataAddin
                         StaysOpen = true
                     };
 
+                    Button selectedDDiaBtn = null;
+                    void SelectDDia(Button btn)
+                    {
+                        if (selectedDDiaBtn != null) selectedDDiaBtn.Background = normalBg;
+                        selectedDDiaBtn = btn;
+                        if (selectedDDiaBtn != null) selectedDDiaBtn.Background = selectedBg;
+                    }
+
                     Button MakeDDiaSubButton(string header, bool isChecked, Action onClick)
                     {
                         var grid = new Grid();
@@ -3564,7 +3572,12 @@ namespace RevitProjectDataAddin
                             IsTabStop = false
                         };
 
-                        btn.Click += (_, __) => onClick?.Invoke();
+                        btn.MouseEnter += (_, __) => SelectDDia(btn);
+                        btn.Click += (_, __) =>
+                        {
+                            SelectDDia(btn);
+                            onClick?.Invoke();
+                        };
                         return btn;
                     }
 
@@ -3591,6 +3604,7 @@ namespace RevitProjectDataAddin
                     placementBtn.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         dDiaPop.IsOpen = true;
+                        SelectDDia(null);
                     }), DispatcherPriority.Input);
                 }
 
