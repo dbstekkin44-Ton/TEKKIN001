@@ -1349,9 +1349,65 @@ namespace RevitProjectDataAddin
         private bool IsEqualCutMarker(GridBotsecozu owner, int rowIndex, double x, double y)
         {
             if (owner == null) return false;
-            return _orangeSegCutMarkers.TryGetValue(owner, out var markers)
-                   && markers != null
-                   && markers.Contains(new OrangeCutPointKey(rowIndex, x, y));
+            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null) return false;
+
+            // Ưu tiên exact key
+            if (markers.Contains(new OrangeCutPointKey(rowIndex, x, y))) return true;
+
+            // Fallback tolerant match để tránh mất dot do rounding/shift nhẹ sau khi chỉnh dài
+            const int eps10 = 10; // 1.0 mm
+            int tx = (int)Math.Round(x * 10.0);
+            int ty = (int)Math.Round(y * 10.0);
+            foreach (var mk in markers)
+            {
+                if (mk.RowIndex != rowIndex) continue;
+                if (Math.Abs(mk.Y_10 - ty) > eps10) continue;
+                if (Math.Abs(mk.X_10 - tx) <= eps10) return true;
+            }
+            return false;
+        }
+
+        private void MoveCutMarkerIfPresent(GridBotsecozu owner, int rowIndex, double y, double fromX, double toX)
+        {
+            if (owner == null) return;
+            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null) return;
+
+            OrangeCutPointKey oldKey = new OrangeCutPointKey(rowIndex, fromX, y);
+            bool found = markers.Remove(oldKey);
+
+            if (!found)
+            {
+                // fallback: tìm marker gần boundary cũ (do rounding/shift nhẹ)
+                const int eps10 = 10; // 1.0 mm
+                int fx = (int)Math.Round(fromX * 10.0);
+                int fy = (int)Math.Round(y * 10.0);
+                int bestD = int.MaxValue;
+                OrangeCutPointKey best = default;
+                bool hasBest = false;
+                foreach (var mk in markers)
+                {
+                    if (mk.RowIndex != rowIndex) continue;
+                    if (Math.Abs(mk.Y_10 - fy) > eps10) continue;
+                    int d = Math.Abs(mk.X_10 - fx);
+                    if (d <= eps10 && d < bestD)
+                    {
+                        bestD = d;
+                        best = mk;
+                        hasBest = true;
+                    }
+                }
+                if (hasBest)
+                {
+                    markers.Remove(best);
+                    found = true;
+                }
+            }
+
+            if (!found) return;
+
+            // giữ marker cắt khi dịch biên, nhưng không tạo marker nếu biên mới không hợp lệ
+            if (double.IsNaN(toX) || double.IsInfinity(toX)) return;
+            markers.Add(new OrangeCutPointKey(rowIndex, toX, y));
         }
 
         private void MoveCutMarkerIfPresent(GridBotsecozu owner, int rowIndex, double y, double fromX, double toX)
