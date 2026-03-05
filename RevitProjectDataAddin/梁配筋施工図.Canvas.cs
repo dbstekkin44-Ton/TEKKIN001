@@ -1239,7 +1239,7 @@ namespace RevitProjectDataAddin
             return true;
         }
 
-        private bool ApplyCustomCutToOrangeSegment(
+        private bool ApplyCustomCutToOrangeSegmentCore(
             GridBotsecozu owner,
             OrangeDimTextKey dimKey,
             List<double> userLengths,
@@ -1321,113 +1321,6 @@ namespace RevitProjectDataAddin
                 if (cp <= x1 + markerEps || cp >= x2 - markerEps) continue;
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
             }
-
-            // 保持: 等分切断の外端(右端)にもドット判定を残す
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
-
-            if (cuts.Count > 0)
-            {
-                double firstRight = cuts[0];
-                double lastLeft = cuts[cuts.Count - 1];
-
-                var firstChild = new OrangeSegKey(segKey.RowIndex, x1, firstRight, y);
-                var lastChild = new OrangeSegKey(segKey.RowIndex, lastLeft, x2, y);
-
-                if (hasLeftAnka)
-                {
-                    SetAnkaOverrideBySegKey(owner, firstChild, AnkaSide.Left, leftAnkaSigned);
-                    SetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, 0.0);
-                }
-
-                if (hasRightAnka)
-                {
-                    SetAnkaOverrideBySegKey(owner, lastChild, AnkaSide.Right, rightAnkaSigned);
-                    SetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, 0.0);
-                }
-            }
-
-            return true;
-        }
-
-        private bool ApplyCustomCutToOrangeSegment(
-            GridBotsecozu owner,
-            OrangeDimTextKey dimKey,
-            List<double> userLengths,
-            bool applyFromLeft)
-        {
-            if (owner == null || userLengths == null || userLengths.Count < 2) return false;
-            if (!TryGetSegKeyForDimKey(owner, dimKey, out var segKey)) return false;
-
-            double baseX1 = segKey.X1_10 / 10.0;
-            double baseX2 = segKey.X2_10 / 10.0;
-            double y = segKey.Y_10 / 10.0;
-            var (x1, x2) = GetOrangeSegOverride(owner, segKey, baseX1, baseX2);
-            double totalLen = x2 - x1;
-            if (totalLen <= 1e-6) return false;
-
-            double sum = 0.0;
-            for (int i = 0; i < userLengths.Count; i++)
-            {
-                if (!(userLengths[i] > 1e-6)) return false;
-                sum += userLengths[i];
-            }
-            if (Math.Abs(sum - totalLen) > 1.0) return false;
-
-            bool hasLeftAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Left, out var leftAnkaSigned);
-            bool hasRightAnka = TryGetAnkaOverrideBySegKey(owner, segKey, AnkaSide.Right, out var rightAnkaSigned);
-
-            if (TryGetOrangeSegInfo(owner, segKey, out var segInfo))
-            {
-                if (!hasLeftAnka && segInfo.HitLeftAnka)
-                {
-                    hasLeftAnka = Math.Abs(segInfo.DefaultLeftAnkaSigned) > 0.0001;
-                    leftAnkaSigned = segInfo.DefaultLeftAnkaSigned;
-                }
-                if (!hasRightAnka && segInfo.HitRightAnka)
-                {
-                    hasRightAnka = Math.Abs(segInfo.DefaultRightAnkaSigned) > 0.0001;
-                    rightAnkaSigned = segInfo.DefaultRightAnkaSigned;
-                }
-            }
-
-            var cuts = new List<double>(Math.Max(0, userLengths.Count - 1));
-            if (applyFromLeft)
-            {
-                double cur = x1;
-                for (int i = 0; i < userLengths.Count - 1; i++)
-                {
-                    cur += userLengths[i];
-                    if (cur > x1 + 1e-6 && cur < x2 - 1e-6)
-                        cuts.Add(cur);
-                }
-            }
-            else
-            {
-                double cur = x2;
-                for (int i = 0; i < userLengths.Count - 1; i++)
-                {
-                    cur -= userLengths[i];
-                    if (cur > x1 + 1e-6 && cur < x2 - 1e-6)
-                        cuts.Add(cur);
-                }
-                cuts.Sort();
-            }
-
-            if (!_orangeSegEqualCutPoints.TryGetValue(owner, out var ownerCuts) || ownerCuts == null)
-            {
-                ownerCuts = new Dictionary<OrangeSegKey, List<double>>();
-                _orangeSegEqualCutPoints[owner] = ownerCuts;
-            }
-            ownerCuts[segKey] = cuts;
-
-            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
-            {
-                markers = new HashSet<OrangeCutPointKey>();
-                _orangeSegCutMarkers[owner] = markers;
-            }
-            foreach (var cp in cuts)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -3353,7 +3246,7 @@ namespace RevitProjectDataAddin
                                 if (ValidateAndPreview(out var lengths))
                                 {
                                     bool leftToRight = cmbDirection.SelectedIndex != 1;
-                                    if (ApplyCustomCutToOrangeSegment(owner, key, lengths, leftToRight))
+                                    if (ApplyCustomCutToOrangeSegmentCore(owner, key, lengths, leftToRight))
                                     {
                                         CloseAll();
                                         Redraw(canvas, owner);
@@ -3369,7 +3262,7 @@ namespace RevitProjectDataAddin
                         if (!ValidateAndPreview(out var lengths)) return;
 
                         bool leftToRight = cmbDirection.SelectedIndex != 1;
-                        if (ApplyCustomCutToOrangeSegment(owner, key, lengths, leftToRight))
+                        if (ApplyCustomCutToOrangeSegmentCore(owner, key, lengths, leftToRight))
                         {
                             CloseAll();
                             Redraw(canvas, owner);
