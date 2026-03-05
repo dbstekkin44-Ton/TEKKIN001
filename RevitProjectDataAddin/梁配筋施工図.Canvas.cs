@@ -3524,21 +3524,63 @@ namespace RevitProjectDataAddin
                         StaysOpen = true
                     };
 
+                    Button MakeDDiaSubButton(string header, bool isChecked, Action onClick)
+                    {
+                        var grid = new Grid();
+                        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+                        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                        var mark = new TextBlock
+                        {
+                            Text = "✓",
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Opacity = isChecked ? 1.0 : 0.0
+                        };
+                        Grid.SetColumn(mark, 0);
+
+                        var txt = new TextBlock
+                        {
+                            Text = header ?? string.Empty,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        Grid.SetColumn(txt, 1);
+
+                        grid.Children.Add(mark);
+                        grid.Children.Add(txt);
+
+                        var btn = new Button
+                        {
+                            Content = grid,
+                            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                            VerticalContentAlignment = VerticalAlignment.Center,
+                            Padding = new Thickness(12, 6, 12, 6),
+                            Background = normalBg,
+                            BorderBrush = Brushes.Transparent,
+                            BorderThickness = new Thickness(0),
+                            MinWidth = MENU2_MIN_WIDTH,
+                            OverridesDefaultStyle = true,
+                            Template = GetFlatBtnTemplate(),
+                            Focusable = false,
+                            IsTabStop = false
+                        };
+
+                        btn.Click += (_, __) => onClick?.Invoke();
+                        return btn;
+                    }
+
                     var root = new StackPanel { Orientation = Orientation.Vertical };
                     foreach (var dia in _standardRebarDiameters)
                     {
                         string d = dia;
                         bool checkedNow = string.Equals(d, curD, StringComparison.Ordinal);
-                        string label = checkedNow ? $"✓ {d}" : d;
 
-                        var btn = MakeMenuButton(label, hasNext: false, minWidth: MENU2_MIN_WIDTH);
-                        btn.Click += (_, __) =>
+                        var btn = MakeDDiaSubButton(d, checkedNow, () =>
                         {
                             string newWhole = $"D{d}-{curLen}";
                             if (SetOrangeDimText(owner, key, newWhole))
                                 Redraw(canvas, owner);
                             CloseAll();
-                        };
+                        });
                         btn.MouseEnter += (_, __) => { SelectMain(placementBtn); };
 
                         root.Children.Add(WithRowDivider(btn));
