@@ -3095,7 +3095,6 @@ namespace RevitProjectDataAddin
                     if (lenPop != null) lenPop.IsOpen = false;
                     if (sidePop != null) sidePop.IsOpen = false;
                     if (ankaPop != null) ankaPop.IsOpen = false;
-                    if (cutModePop != null) cutModePop.IsOpen = false;
                     if (dDiaPop != null) dDiaPop.IsOpen = false;
                     if (cutDetailPop != null) cutDetailPop.IsOpen = false;
 
