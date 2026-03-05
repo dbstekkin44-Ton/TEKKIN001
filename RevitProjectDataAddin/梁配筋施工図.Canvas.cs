@@ -2437,6 +2437,12 @@ namespace RevitProjectDataAddin
 
                 void OpenSidePopup(Button placementBtn, AnkaSide side)
                 {
+                    if (lenDirPop != null) lenDirPop.IsOpen = false;
+                    if (lenPop != null) lenPop.IsOpen = false;
+                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
+                    if (cutInputPop != null) cutInputPop.IsOpen = false;
+                    if (cutModePop != null) cutModePop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
                     if (sidePop != null) sidePop.IsOpen = false;
 
                     sidePop = new System.Windows.Controls.Primitives.Popup
@@ -2689,6 +2695,12 @@ namespace RevitProjectDataAddin
 
                 void OpenLenDirPopup(Button placementBtn, bool isLeftMenu)
                 {
+                    if (sidePop != null) sidePop.IsOpen = false;
+                    if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
+                    if (cutInputPop != null) cutInputPop.IsOpen = false;
+                    if (cutModePop != null) cutModePop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
                     if (lenDirPop != null) lenDirPop.IsOpen = false;
 
                     lenDirPop = new System.Windows.Controls.Primitives.Popup
@@ -3079,6 +3091,12 @@ namespace RevitProjectDataAddin
 
                 void OpenCutDetailPopup(FrameworkElement placementTarget, int segments)
                 {
+                    if (lenDirPop != null) lenDirPop.IsOpen = false;
+                    if (lenPop != null) lenPop.IsOpen = false;
+                    if (sidePop != null) sidePop.IsOpen = false;
+                    if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (cutModePop != null) cutModePop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
                     if (cutDetailPop != null) cutDetailPop.IsOpen = false;
 
                     if (segments < 2) return;
@@ -3291,6 +3309,11 @@ namespace RevitProjectDataAddin
 
                 void OpenCutInputPopup(Button placementBtn, bool isCustom)
                 {
+                    if (lenDirPop != null) lenDirPop.IsOpen = false;
+                    if (lenPop != null) lenPop.IsOpen = false;
+                    if (sidePop != null) sidePop.IsOpen = false;
+                    if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
                     if (cutDetailPop != null) cutDetailPop.IsOpen = false;
                     if (cutInputPop != null) cutInputPop.IsOpen = false;
 
