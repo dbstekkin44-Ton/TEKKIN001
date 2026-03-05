@@ -3010,6 +3010,7 @@ namespace RevitProjectDataAddin
                     if (cutModePop != null) cutModePop.IsOpen = false;
                     if (sidePop != null) sidePop.IsOpen = false;
                     if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
 
                     lenPop = new System.Windows.Controls.Primitives.Popup
                     {
@@ -3385,6 +3386,7 @@ namespace RevitProjectDataAddin
                     if (cutDetailPop != null) cutDetailPop.IsOpen = false;
                     if (cutInputPop != null) cutInputPop.IsOpen = false;
                     if (cutModePop != null) cutModePop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
 
                     cutModePop = new System.Windows.Controls.Primitives.Popup
                     {
@@ -3442,6 +3444,7 @@ namespace RevitProjectDataAddin
                     if (cutModePop != null) cutModePop.IsOpen = false;
                     if (ankaPop != null) ankaPop.IsOpen = false;
                     if (sidePop != null) sidePop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
 
                     ankaPop = new System.Windows.Controls.Primitives.Popup
                     {
@@ -3614,12 +3617,14 @@ namespace RevitProjectDataAddin
                 btnAnka.MouseEnter += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnAnka);
                     OpenAnkaPopup(btnAnka);
                 };
                 btnAnka.Click += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnAnka);
                     OpenAnkaPopup(btnAnka);
                 };
@@ -3642,12 +3647,14 @@ namespace RevitProjectDataAddin
                 btnLen.MouseEnter += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnLen);
                     OpenLenPopup(btnLen);
                 };
                 btnLen.Click += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnLen);
                     OpenLenPopup(btnLen);
                 };
@@ -3656,12 +3663,14 @@ namespace RevitProjectDataAddin
                 btnCut.MouseEnter += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnCut);
                     OpenCutModePopup(btnCut);
                 };
                 btnCut.Click += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
+                    CloseSubMenus();
                     SelectMain(btnCut);
                     OpenCutModePopup(btnCut);
                 };
