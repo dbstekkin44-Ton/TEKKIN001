@@ -4786,7 +4786,7 @@ namespace RevitProjectDataAddin
                 if (!ShowOrangeDims) return;
 
                 double baseLen = (x2 - x1);
-                if (baseLen < MinDimLen && !forceShowForCutChild) return;
+                if (baseLen <= 1e-6) return;
 
                 double cx = 0.5 * (x1 + x2);
                 int si = FindSpanIndexByX(cx, spanLeftArrLocal, spanRightArrLocal, spanCountLocal);
