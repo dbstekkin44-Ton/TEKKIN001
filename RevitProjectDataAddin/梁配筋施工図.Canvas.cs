@@ -2082,6 +2082,7 @@ namespace RevitProjectDataAddin
                 System.Windows.Controls.Primitives.Popup cutModePop = null;
                 System.Windows.Controls.Primitives.Popup cutInputPop = null;
                 System.Windows.Controls.Primitives.Popup cutDetailPop = null;
+                System.Windows.Controls.Primitives.Popup dDiaPop = null;
 
                 void CloseSubMenus()
                 {
@@ -2092,6 +2093,7 @@ namespace RevitProjectDataAddin
                     if (cutModePop != null) cutModePop.IsOpen = false;
                     if (sidePop != null) sidePop.IsOpen = false;
                     if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
                 }
 
                 var win = Window.GetWindow(canvas);
@@ -2171,6 +2173,7 @@ namespace RevitProjectDataAddin
                         if (cutModePop != null) cutModePop.IsOpen = false;
                         if (sidePop != null) sidePop.IsOpen = false;
                         if (ankaPop != null) ankaPop.IsOpen = false;
+                        if (dDiaPop != null) dDiaPop.IsOpen = false;
                         if (mainPop != null) mainPop.IsOpen = false;
                     }
                     catch { }
@@ -2233,7 +2236,8 @@ namespace RevitProjectDataAddin
                         || (lenDirPop?.Child is FrameworkElement ld && IsPointInside(ld, screenPt))
                         || (cutModePop?.Child is FrameworkElement cm && IsPointInside(cm, screenPt))
                         || (cutInputPop?.Child is FrameworkElement ci && IsPointInside(ci, screenPt))
-                        || (cutDetailPop?.Child is FrameworkElement cd && IsPointInside(cd, screenPt));
+                        || (cutDetailPop?.Child is FrameworkElement cd && IsPointInside(cd, screenPt))
+                        || (dDiaPop?.Child is FrameworkElement dd && IsPointInside(dd, screenPt));
 
                     if (!inside)
                     {
@@ -3497,6 +3501,57 @@ namespace RevitProjectDataAddin
                     }), DispatcherPriority.Input);
                 }
 
+                void OpenDDiaPopup(Button placementBtn)
+                {
+                    if (lenDirPop != null) lenDirPop.IsOpen = false;
+                    if (lenPop != null) lenPop.IsOpen = false;
+                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
+                    if (cutInputPop != null) cutInputPop.IsOpen = false;
+                    if (cutModePop != null) cutModePop.IsOpen = false;
+                    if (sidePop != null) sidePop.IsOpen = false;
+                    if (ankaPop != null) ankaPop.IsOpen = false;
+                    if (dDiaPop != null) dDiaPop.IsOpen = false;
+
+                    TrySplitTopParts(tb.Text, out var curD, out var curLen);
+
+                    dDiaPop = new System.Windows.Controls.Primitives.Popup
+                    {
+                        PlacementTarget = placementBtn,
+                        Placement = System.Windows.Controls.Primitives.PlacementMode.Right,
+                        HorizontalOffset = 1,
+                        VerticalOffset = -1.5,
+                        AllowsTransparency = true,
+                        StaysOpen = true
+                    };
+
+                    var root = new StackPanel { Orientation = Orientation.Vertical };
+                    foreach (var dia in _standardRebarDiameters)
+                    {
+                        string d = dia;
+                        bool checkedNow = string.Equals(d, curD, StringComparison.Ordinal);
+                        string label = checkedNow ? $"✓ {d}" : d;
+
+                        var btn = MakeMenuButton(label, hasNext: false, minWidth: MENU2_MIN_WIDTH);
+                        btn.Click += (_, __) =>
+                        {
+                            string newWhole = $"D{d}-{curLen}";
+                            if (SetOrangeDimText(owner, key, newWhole))
+                                Redraw(canvas, owner);
+                            CloseAll();
+                        };
+                        btn.MouseEnter += (_, __) => { SelectMain(placementBtn); };
+
+                        root.Children.Add(WithRowDivider(btn));
+                    }
+
+                    dDiaPop.Child = WrapBox(root);
+
+                    placementBtn.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        dDiaPop.IsOpen = true;
+                    }), DispatcherPriority.Input);
+                }
+
                 var mainRoot = new StackPanel { Orientation = Orientation.Vertical };
 
                 var btnAnka = MakeMenuButton("アンカ", hasNext: true, minWidth: MENU1_MIN_WIDTH);
@@ -3513,31 +3568,18 @@ namespace RevitProjectDataAddin
                     OpenAnkaPopup(btnAnka);
                 };
 
-                var btnD = MakeMenuButton("D", hasNext: false, minWidth: MENU1_MIN_WIDTH);
+                var btnD = MakeMenuButton("D", hasNext: true, minWidth: MENU1_MIN_WIDTH);
                 btnD.MouseEnter += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
-                    CloseSubMenus();
                     SelectMain(btnD);
+                    OpenDDiaPopup(btnD);
                 };
                 btnD.Click += (_, __) =>
                 {
                     CancelActiveAnkaEdit();
-                    CloseSubMenus();
                     SelectMain(btnD);
-                    CloseAll();
-
-                    TrySplitTopParts(tb.Text, out var curD, out var curLen);
-                    ShowComboEditor(canvas, tb, T, wx, wy, HAnchor.Center, VAnchor.Bottom,
-                        () => _standardRebarDiameters,
-                        () => curD,
-                        newDia =>
-                        {
-                            string dia = (newDia ?? string.Empty).Trim();
-                            string newWhole = $"D{dia}-{curLen}";
-                            if (SetOrangeDimText(owner, key, newWhole))
-                                Redraw(canvas, owner);
-                        });
+                    OpenDDiaPopup(btnD);
                 };
 
                 var btnLen = MakeMenuButton("長さ", hasNext: true, minWidth: MENU1_MIN_WIDTH);
