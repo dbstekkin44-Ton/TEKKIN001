@@ -1354,6 +1354,19 @@ namespace RevitProjectDataAddin
                    && markers.Contains(new OrangeCutPointKey(rowIndex, x, y));
         }
 
+        private void MoveCutMarkerIfPresent(GridBotsecozu owner, int rowIndex, double y, double fromX, double toX)
+        {
+            if (owner == null) return;
+            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null) return;
+
+            var oldKey = new OrangeCutPointKey(rowIndex, fromX, y);
+            if (!markers.Remove(oldKey)) return;
+
+            // giữ marker cắt khi dịch biên, nhưng không tạo marker nếu biên mới không hợp lệ
+            if (double.IsNaN(toX) || double.IsInfinity(toX)) return;
+            markers.Add(new OrangeCutPointKey(rowIndex, toX, y));
+        }
+
         private bool ApplyOrangeSegLengthDelta(GridBotsecozu owner, OrangeDimTextKey dimKey, bool isLeftMenu, bool pullLeft, double delta)
         {
             if (owner == null || delta <= 0)
@@ -1414,7 +1427,18 @@ namespace RevitProjectDataAddin
             if (!adjustedNeighbor && newX2 < newX1)
                 newX2 = newX1;
 
-            return SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            bool changed = SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            if (changed)
+            {
+                int rowIndex = segKey.RowIndex;
+                double y = segKey.Y_10 / 10.0;
+                if (isLeftMenu)
+                    MoveCutMarkerIfPresent(owner, rowIndex, y, curX1, newX1);
+                else
+                    MoveCutMarkerIfPresent(owner, rowIndex, y, curX2, newX2);
+            }
+
+            return changed;
         }
 
 
@@ -1519,6 +1543,8 @@ namespace RevitProjectDataAddin
             double newX1 = x1;
             double newX2 = x2;
 
+            double oldBoundary = anchorLeft ? x2 : x1;
+
             if (anchorLeft)
             {
                 newX2 = x1 + length;
@@ -1548,7 +1574,16 @@ namespace RevitProjectDataAddin
                 if (newX1 > x2) newX1 = x2;
             }
 
-            return SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            bool changed = SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            if (changed)
+            {
+                int rowIndex = segKey.RowIndex;
+                double y = segKey.Y_10 / 10.0;
+                double newBoundary = anchorLeft ? newX2 : newX1;
+                MoveCutMarkerIfPresent(owner, rowIndex, y, oldBoundary, newBoundary);
+            }
+
+            return changed;
         }
 
         private void ResolveAnkaDefaults(
