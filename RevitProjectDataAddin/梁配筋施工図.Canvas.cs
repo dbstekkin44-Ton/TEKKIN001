@@ -4767,33 +4767,16 @@ namespace RevitProjectDataAddin
                 }
                 if (borders.Count == 0) return;
 
-                var used = new bool[borders.Count];
-                foreach (var cut in rowCuts)
+                const double CutMatchTol = 1.0;
+                foreach (var border in borders)
                 {
-                    int best = -1;
-                    double bestD = double.PositiveInfinity;
-                    for (int i = 0; i < borders.Count; i++)
-                    {
-                        if (used[i]) continue;
-                        double d = Math.Abs(borders[i] - cut);
-                        if (d < bestD)
-                        {
-                            bestD = d;
-                            best = i;
-                        }
-                    }
-                    if (best >= 0)
-                    {
-                        used[best] = true;
+                    bool isHardCut = rowCuts.Any(cut => Math.Abs(cut - border) <= CutMatchTol);
+                    if (!isHardCut) continue;
 
-                        //double xDot = borders[best] + offsetX;
+                    double appliedOffset = offsetSelector?.Invoke(border) ?? offsetX;
+                    double xDot = border + appliedOffset;
 
-                        double appliedOffset = offsetSelector?.Invoke(borders[best]) ?? offsetX;
-                        double xDot = borders[best] + appliedOffset;
-
-
-                        DrawDotMm_Rec(cvs, tr, owner, xDot, y, rMm: dotR, layer: "MARK", fill: brush);
-                    }
+                    DrawDotMm_Rec(cvs, tr, owner, xDot, y, rMm: dotR, layer: "MARK", fill: brush);
                 }
             }
 
