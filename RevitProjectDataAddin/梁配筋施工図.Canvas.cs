@@ -1211,7 +1211,9 @@ namespace RevitProjectDataAddin
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
 
-            // cut markerは内部の切断点のみ保持（外端はcut pointではない）
+            // 保持: 等分切断の外端(右端)にもドット判定を残す（ANKA端は除外）
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1315,6 +1317,8 @@ namespace RevitProjectDataAddin
             }
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
