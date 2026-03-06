@@ -1203,17 +1203,7 @@ namespace RevitProjectDataAddin
             }
             ownerCuts[segKey] = cuts;
 
-            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
-            {
-                markers = new HashSet<OrangeCutPointKey>();
-                _orangeSegCutMarkers[owner] = markers;
-            }
-            foreach (var cp in cuts)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-
-            // 保持: 等分切断の外端(右端)にもドット判定を残す（ANKA端は除外）
-            if (!hasRightAnka)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, y);
 
             if (cuts.Count > 0)
             {
@@ -1310,15 +1300,7 @@ namespace RevitProjectDataAddin
             }
             ownerCuts[segKey] = cuts;
 
-            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
-            {
-                markers = new HashSet<OrangeCutPointKey>();
-                _orangeSegCutMarkers[owner] = markers;
-            }
-            foreach (var cp in cuts)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-            if (!hasRightAnka)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, y);
 
             if (cuts.Count > 0)
             {
@@ -4918,7 +4900,9 @@ namespace RevitProjectDataAddin
                 double ankaAdd =
                     (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
                     (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
-                if (suppressAnkaInTopLength) ankaAdd = 0.0;
+                // 等分/任意切断の子セグメントでは通常ANKA加算を抑制するが、
+                // 実際にANKAが引き継がれている端部セグメントは上段DIMにANKAを含める。
+                if (suppressAnkaInTopLength && !(hasLeftAnka || hasRightAnka)) ankaAdd = 0.0;
 
                 // Text TOP
                 double wxTop = cx;
