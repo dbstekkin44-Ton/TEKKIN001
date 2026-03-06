@@ -1211,8 +1211,9 @@ namespace RevitProjectDataAddin
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
 
-            // 保持: 等分切断の外端(右端)にもドット判定を残す
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            // 保持: 等分切断の外端(右端)にもドット判定を残す（ANKA端は除外）
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1316,7 +1317,8 @@ namespace RevitProjectDataAddin
             }
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1348,6 +1350,40 @@ namespace RevitProjectDataAddin
             return _orangeSegCutMarkers.TryGetValue(owner, out var markers)
                    && markers != null
                    && markers.Contains(new OrangeCutPointKey(rowIndex, x, y));
+        }
+
+        private void RebuildOrangeCutMarkersForRow(GridBotsecozu owner, int rowIndex, double y)
+        {
+            if (owner == null) return;
+            if (!_orangeSegToInfo.TryGetValue(owner, out var segDict) || segDict == null) return;
+
+            var baseSegs = segDict.Keys
+                .Where(k => k.RowIndex == rowIndex && k.Y_10 == (int)Math.Round(y * 10.0))
+                .Select(k => (x1: k.X1_10 / 10.0, x2: k.X2_10 / 10.0))
+                .Where(seg => seg.x2 > seg.x1 + 1e-6)
+                .Distinct()
+                .OrderBy(seg => seg.x1)
+                .ToList();
+
+            if (baseSegs.Count == 0) return;
+
+            var visibleSegs = GetVisibleOrangeSegs(owner, rowIndex, y, baseSegs)
+                .OrderBy(seg => seg.X1)
+                .ToList();
+
+            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
+            {
+                markers = new HashSet<OrangeCutPointKey>();
+                _orangeSegCutMarkers[owner] = markers;
+            }
+
+            markers.RemoveWhere(m => m.RowIndex == rowIndex && m.Y_10 == (int)Math.Round(y * 10.0));
+
+            for (int i = 0; i < visibleSegs.Count - 1; i++)
+            {
+                double boundary = 0.5 * (visibleSegs[i].X2 + visibleSegs[i + 1].X1);
+                markers.Add(new OrangeCutPointKey(rowIndex, boundary, y));
+            }
         }
 
         private bool ApplyOrangeSegLengthDelta(GridBotsecozu owner, OrangeDimTextKey dimKey, bool isLeftMenu, bool pullLeft, double delta)
@@ -1410,7 +1446,10 @@ namespace RevitProjectDataAddin
             if (!adjustedNeighbor && newX2 < newX1)
                 newX2 = newX1;
 
-            return SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            bool changed = SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            if (changed)
+                RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, segKey.Y_10 / 10.0);
+            return changed;
         }
 
 
@@ -1544,7 +1583,10 @@ namespace RevitProjectDataAddin
                 if (newX1 > x2) newX1 = x2;
             }
 
-            return SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            bool changed = SetOrangeSegOverride(owner, segKey, newX1, newX2);
+            if (changed)
+                RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, segKey.Y_10 / 10.0);
+            return changed;
         }
 
         private void ResolveAnkaDefaults(
@@ -4782,7 +4824,8 @@ namespace RevitProjectDataAddin
                 if (!ShowOrangeDims) return;
 
                 double baseLen = (x2 - x1);
-                if (baseLen < MinDimLen && !forceShowForCutChild) return;
+                // DIMは短尺でも、セグメントが存在する限り表示する（長さ調整「引く」後に消えないようにする）
+                if (baseLen <= 1e-6) return;
 
                 double cx = 0.5 * (x1 + x2);
                 int si = FindSpanIndexByX(cx, spanLeftArrLocal, spanRightArrLocal, spanCountLocal);
