@@ -1659,18 +1659,8 @@ namespace RevitProjectDataAddin
                 }
                 if (set.Add(info.SegKey)) changed = true;
 
-                // 2a-2) remove equal-cut dot markers at deleted segment boundaries
-                if (_orangeSegCutMarkers.TryGetValue(owner, out var cutMarkers) && cutMarkers != null)
-                {
-                    double y = info.SegKey.Y_10 / 10.0;
-                    double x1 = info.SegKey.X1_10 / 10.0;
-                    double x2 = info.SegKey.X2_10 / 10.0;
-
-                    if (cutMarkers.Remove(new OrangeCutPointKey(info.SegKey.RowIndex, x1, y)))
-                        changed = true;
-                    if (cutMarkers.Remove(new OrangeCutPointKey(info.SegKey.RowIndex, x2, y)))
-                        changed = true;
-                }
+                // 2a-2) Rebuild cut markers for the row so deleted-segment dots are fully synchronized
+                RebuildOrangeCutMarkersForRow(owner, info.SegKey.RowIndex, info.SegKey.Y_10 / 10.0);
 
                 // 2b) clear TOP/BOTTOM override (nếu có)
                 if (!clickedKey.Equals(info.TopKey))
