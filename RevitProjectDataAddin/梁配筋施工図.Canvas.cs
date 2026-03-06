@@ -1203,17 +1203,7 @@ namespace RevitProjectDataAddin
             }
             ownerCuts[segKey] = cuts;
 
-            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
-            {
-                markers = new HashSet<OrangeCutPointKey>();
-                _orangeSegCutMarkers[owner] = markers;
-            }
-            foreach (var cp in cuts)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-
-            // 保持: 等分切断の外端(右端)にもドット判定を残す（ANKA端は除外）
-            if (!hasRightAnka)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, y);
 
             if (cuts.Count > 0)
             {
@@ -1310,15 +1300,7 @@ namespace RevitProjectDataAddin
             }
             ownerCuts[segKey] = cuts;
 
-            if (!_orangeSegCutMarkers.TryGetValue(owner, out var markers) || markers == null)
-            {
-                markers = new HashSet<OrangeCutPointKey>();
-                _orangeSegCutMarkers[owner] = markers;
-            }
-            foreach (var cp in cuts)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-            if (!hasRightAnka)
-                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            RebuildOrangeCutMarkersForRow(owner, segKey.RowIndex, y);
 
             if (cuts.Count > 0)
             {
