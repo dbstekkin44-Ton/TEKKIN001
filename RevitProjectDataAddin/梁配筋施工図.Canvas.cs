@@ -3687,29 +3687,29 @@ namespace RevitProjectDataAddin
                     }
                 };
 
-                var btnReset = MakeMenuButton("リセット", hasNext: false, minWidth: MENU1_MIN_WIDTH);
-                btnReset.MouseEnter += (_, __) =>
-                {
-                    CancelActiveAnkaEdit();
-                    CloseSubMenus();
-                    SelectMain(btnReset);
-                };
-                btnReset.Click += (_, __) =>
-                {
-                    CancelActiveAnkaEdit();
-                    CloseSubMenus();
-                    SelectMain(btnReset);
-                    CloseAll();
-                    if (SetOrangeDimText(owner, key, ""))
-                        Redraw(canvas, owner);
-                };
+                //var btnReset = MakeMenuButton("リセット", hasNext: false, minWidth: MENU1_MIN_WIDTH);
+                //btnReset.MouseEnter += (_, __) =>
+                //{
+                //    CancelActiveAnkaEdit();
+                //    CloseSubMenus();
+                //    SelectMain(btnReset);
+                //};
+                //btnReset.Click += (_, __) =>
+                //{
+                //    CancelActiveAnkaEdit();
+                //    CloseSubMenus();
+                //    SelectMain(btnReset);
+                //    CloseAll();
+                //    if (SetOrangeDimText(owner, key, ""))
+                //        Redraw(canvas, owner);
+                //};
 
                 mainRoot.Children.Add(WithRowDivider(btnAnka));
                 mainRoot.Children.Add(WithRowDivider(btnD));
                 mainRoot.Children.Add(WithRowDivider(btnLen));
                 mainRoot.Children.Add(WithRowDivider(btnCut));
                 mainRoot.Children.Add(WithRowDivider(btnDel));
-                mainRoot.Children.Add(WithRowDivider(btnReset));
+                //mainRoot.Children.Add(WithRowDivider(btnReset));
 
                 mainPop.Child = WrapBox(mainRoot);
 
@@ -15741,6 +15741,7 @@ namespace RevitProjectDataAddin
 
                 box.Visibility = System.Windows.Visibility.Collapsed;
                 box.Background = Brushes.Transparent;
+
                 box.BorderBrush = Brushes.Transparent;
             }
 
