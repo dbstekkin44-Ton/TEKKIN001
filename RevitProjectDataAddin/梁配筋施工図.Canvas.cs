@@ -1208,7 +1208,7 @@ namespace RevitProjectDataAddin
                 markers = new HashSet<OrangeCutPointKey>();
                 _orangeSegCutMarkers[owner] = markers;
             }
-            const double markerEps = 0.5;
+            const double markerEps = 1e-6;
             foreach (var cp in cuts)
             {
                 if (cp <= x1 + markerEps || cp >= x2 - markerEps) continue;
@@ -1315,7 +1315,7 @@ namespace RevitProjectDataAddin
                 markers = new HashSet<OrangeCutPointKey>();
                 _orangeSegCutMarkers[owner] = markers;
             }
-            const double markerEps = 0.5;
+            const double markerEps = 1e-6;
             foreach (var cp in cuts)
             {
                 if (cp <= x1 + markerEps || cp >= x2 - markerEps) continue;
