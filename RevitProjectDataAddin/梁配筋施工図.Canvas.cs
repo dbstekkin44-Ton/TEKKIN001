@@ -4972,12 +4972,12 @@ namespace RevitProjectDataAddin
 
                 if (IsEqualCutMarker(owner, rowIndex, x1, y))
                 {
-                    DrawDotMm_Rec(cvs, tr, owner, x1, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
+                    DrawDotMm_Rec(cvs, tr, owner, x1, y, rMm: 30, layer: "DIM", fill: Brushes.Black);
                 }
 
                 if (IsEqualCutMarker(owner, rowIndex, x2, y))
                 {
-                    DrawDotMm_Rec(cvs, tr, owner, x2, y, rMm: 36, layer: "DIM", fill: Brushes.Black);
+                    DrawDotMm_Rec(cvs, tr, owner, x2, y, rMm: 30, layer: "DIM", fill: Brushes.Black);
                 }
             }
 
