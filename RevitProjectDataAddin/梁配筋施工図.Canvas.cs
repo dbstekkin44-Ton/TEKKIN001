@@ -1211,8 +1211,9 @@ namespace RevitProjectDataAddin
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
 
-            // 保持: 等分切断の外端(右端)にもドット判定を残す
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            // 保持: 等分切断の外端(右端)にもドット判定を残す（ANKA端は除外）
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1316,7 +1317,8 @@ namespace RevitProjectDataAddin
             }
             foreach (var cp in cuts)
                 markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
-            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
+            if (!hasRightAnka)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -4782,7 +4784,8 @@ namespace RevitProjectDataAddin
                 if (!ShowOrangeDims) return;
 
                 double baseLen = (x2 - x1);
-                if (baseLen < MinDimLen && !forceShowForCutChild) return;
+                // DIMは短尺でも、セグメントが存在する限り表示する（長さ調整「引く」後に消えないようにする）
+                if (baseLen <= 1e-6) return;
 
                 double cx = 0.5 * (x1 + x2);
                 int si = FindSpanIndexByX(cx, spanLeftArrLocal, spanRightArrLocal, spanCountLocal);
