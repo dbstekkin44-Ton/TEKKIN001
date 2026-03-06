@@ -4900,7 +4900,9 @@ namespace RevitProjectDataAddin
                 double ankaAdd =
                     (hasLeftAnka ? Math.Abs(leftAnkaSigned) : 0.0) +
                     (hasRightAnka ? Math.Abs(rightAnkaSigned) : 0.0);
-                if (suppressAnkaInTopLength) ankaAdd = 0.0;
+                // 等分/任意切断の子セグメントでは通常ANKA加算を抑制するが、
+                // 実際にANKAが引き継がれている端部セグメントは上段DIMにANKAを含める。
+                if (suppressAnkaInTopLength && !(hasLeftAnka || hasRightAnka)) ankaAdd = 0.0;
 
                 // Text TOP
                 double wxTop = cx;
