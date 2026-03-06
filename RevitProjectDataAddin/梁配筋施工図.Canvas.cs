@@ -3049,13 +3049,8 @@ namespace RevitProjectDataAddin
 
                 void OpenLenPopup(Button placementBtn)
                 {
-                    if (lenDirPop != null) lenDirPop.IsOpen = false;
+                    CloseSubMenus();
                     if (lenPop != null) lenPop.IsOpen = false;
-                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
-                    if (cutInputPop != null) cutInputPop.IsOpen = false;
-                    if (cutModePop != null) cutModePop.IsOpen = false;
-                    if (sidePop != null) sidePop.IsOpen = false;
-                    if (ankaPop != null) ankaPop.IsOpen = false;
 
                     lenPop = new System.Windows.Controls.Primitives.Popup
                     {
@@ -3424,12 +3419,7 @@ namespace RevitProjectDataAddin
 
                 void OpenCutModePopup(Button placementBtn)
                 {
-                    if (lenDirPop != null) lenDirPop.IsOpen = false;
-                    if (lenPop != null) lenPop.IsOpen = false;
-                    if (sidePop != null) sidePop.IsOpen = false;
-                    if (ankaPop != null) ankaPop.IsOpen = false;
-                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
-                    if (cutInputPop != null) cutInputPop.IsOpen = false;
+                    CloseSubMenus();
                     if (cutModePop != null) cutModePop.IsOpen = false;
 
                     cutModePop = new System.Windows.Controls.Primitives.Popup
@@ -3481,13 +3471,8 @@ namespace RevitProjectDataAddin
 
                 void OpenAnkaPopup(Button placementBtn)
                 {
-                    if (lenDirPop != null) lenDirPop.IsOpen = false;
-                    if (lenPop != null) lenPop.IsOpen = false;
-                    if (cutDetailPop != null) cutDetailPop.IsOpen = false;
-                    if (cutInputPop != null) cutInputPop.IsOpen = false;
-                    if (cutModePop != null) cutModePop.IsOpen = false;
+                    CloseSubMenus();
                     if (ankaPop != null) ankaPop.IsOpen = false;
-                    if (sidePop != null) sidePop.IsOpen = false;
 
                     ankaPop = new System.Windows.Controls.Primitives.Popup
                     {
