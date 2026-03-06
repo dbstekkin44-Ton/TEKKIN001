@@ -1046,28 +1046,6 @@ namespace RevitProjectDataAddin
         private readonly Dictionary<GridBotsecozu, HashSet<OrangeCutPointKey>> _orangeSegCutMarkers
             = new Dictionary<GridBotsecozu, HashSet<OrangeCutPointKey>>();
 
-        private const double InternalCutPointEpsMm = 0.5;
-
-        private static bool IsInternalCutPoint(double cp, double x1, double x2, double epsMm = InternalCutPointEpsMm)
-            => cp > (x1 + epsMm) && cp < (x2 - epsMm);
-
-        private static void AddInternalCutMarkers(
-            HashSet<OrangeCutPointKey> markers,
-            int rowIndex,
-            double y,
-            double x1,
-            double x2,
-            IEnumerable<double> cutPoints)
-        {
-            if (markers == null || cutPoints == null) return;
-
-            foreach (var cp in cutPoints)
-            {
-                if (!IsInternalCutPoint(cp, x1, x2)) continue;
-                markers.Add(new OrangeCutPointKey(rowIndex, cp, y));
-            }
-        }
-
         private bool TryGetOrangeSegOverride(GridBotsecozu owner, OrangeSegKey key, out OrangeSegOverride val)
         {
             val = default;
@@ -1230,7 +1208,11 @@ namespace RevitProjectDataAddin
                 markers = new HashSet<OrangeCutPointKey>();
                 _orangeSegCutMarkers[owner] = markers;
             }
-            AddInternalCutMarkers(markers, segKey.RowIndex, y, x1, x2, cuts);
+            foreach (var cp in cuts)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
+
+            // 保持: 等分切断の外端(右端)にもドット判定を残す
+            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
@@ -1332,7 +1314,9 @@ namespace RevitProjectDataAddin
                 markers = new HashSet<OrangeCutPointKey>();
                 _orangeSegCutMarkers[owner] = markers;
             }
-            AddInternalCutMarkers(markers, segKey.RowIndex, y, x1, x2, cuts);
+            foreach (var cp in cuts)
+                markers.Add(new OrangeCutPointKey(segKey.RowIndex, cp, y));
+            markers.Add(new OrangeCutPointKey(segKey.RowIndex, x2, y));
 
             if (cuts.Count > 0)
             {
