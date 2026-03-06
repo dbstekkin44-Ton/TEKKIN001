@@ -4784,7 +4784,8 @@ namespace RevitProjectDataAddin
                 if (!ShowOrangeDims) return;
 
                 double baseLen = (x2 - x1);
-                if (baseLen < MinDimLen && !forceShowForCutChild) return;
+                // DIMは短尺でも、セグメントが存在する限り表示する（長さ調整「引く」後に消えないようにする）
+                if (baseLen <= 1e-6) return;
 
                 double cx = 0.5 * (x1 + x2);
                 int si = FindSpanIndexByX(cx, spanLeftArrLocal, spanRightArrLocal, spanCountLocal);
