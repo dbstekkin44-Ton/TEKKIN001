@@ -2091,8 +2091,14 @@ namespace RevitProjectDataAddin
             const double dimGap = 6;
 
             // chỉnh riêng vị trí hình minh họa trái / phải
-            const double leftShapeOffsetX = -10;   // hình minh họa bên trái
-            const double rightShapeOffsetX = -10;    // hình minh họa bên phải
+            const double leftShapeOffsetX = -5;
+            const double rightShapeOffsetX = -10;
+
+            // chỉnh riêng vị trí DIM đỏ trái / phải
+            const double leftDimOffsetX = 5;
+            const double rightDimOffsetX = -5;
+            const double leftDimOffsetY = 0;
+            const double rightDimOffsetY = 0;
 
             var canvas = new Canvas
             {
@@ -2104,6 +2110,7 @@ namespace RevitProjectDataAddin
 
             bool isUp = (verticalOffset == -10);
             bool isLeft = side == AnkaSide.Left;
+
             double shapeOffsetX = (canvas.Width - logicalPreviewWidth) / 2.0
                                 + (isLeft ? leftShapeOffsetX : rightShapeOffsetX);
 
@@ -2125,35 +2132,41 @@ namespace RevitProjectDataAddin
 
             if (isUp)
             {
-                // -------- UP (上) --------
                 hookX = (isLeft ? 5 : 55) + shapeOffsetX;
                 r = 4.0;
 
                 yH = 17;
                 yVEnd = -2;
 
-                dimX = isLeft ? (shapeOffsetX - dimGap) : (shapeOffsetX + logicalPreviewWidth + dimGap);
-                dimTop = -2;
-                dimBottom = 17;
+                dimX = isLeft
+                    ? (shapeOffsetX - dimGap + leftDimOffsetX)
+                    : (shapeOffsetX + logicalPreviewWidth + dimGap + rightDimOffsetX);
+
+                dimTop = -2 + (isLeft ? leftDimOffsetY : rightDimOffsetY);
+                dimBottom = 17 + (isLeft ? leftDimOffsetY : rightDimOffsetY);
+
                 capLen = 6;
             }
             else
             {
-                // -------- DOWN (下) --------
                 hookX = (isLeft ? 5 : 55) + shapeOffsetX;
                 r = 4.0;
 
                 yH = 1;
                 yVEnd = 19;
 
-                dimX = isLeft ? (shapeOffsetX - dimGap) : (shapeOffsetX + logicalPreviewWidth + dimGap);
-                dimTop = 1;
-                dimBottom = 19;
+                dimX = isLeft
+                    ? (shapeOffsetX - dimGap + leftDimOffsetX)
+                    : (shapeOffsetX + logicalPreviewWidth + dimGap + rightDimOffsetX);
+
+                dimTop = 1 + (isLeft ? leftDimOffsetY : rightDimOffsetY);
+                dimBottom = 19 + (isLeft ? leftDimOffsetY : rightDimOffsetY);
+
                 capLen = 6;
             }
 
             // ==========================================================
-            // 1) VẼ ANKA (PATH có ARC) - để mặc định để cung mượt (anti-alias)
+            // 1) VẼ ANKA
             // ==========================================================
             horizontalStartX = (isLeft ? 56 : 4) + shapeOffsetX;
             horizontalEndX = isLeft ? (hookX + r) : (hookX - r);
@@ -2196,15 +2209,13 @@ namespace RevitProjectDataAddin
                 StrokeEndLineCap = PenLineCap.Round
             };
 
-            // quan trọng: KHÔNG aliased cho path (để cung tròn mượt)
             RenderOptions.SetEdgeMode(path, EdgeMode.Unspecified);
-
             canvas.Children.Add(path);
 
             // ==========================================================
-            // 2) VẼ "|-|" (LINE 1px) - dùng aliased + pixel align để sắc
+            // 2) VẼ DIM "|-|"
             // ==========================================================
-            double px = 0.5; // 1px hairline: +0.5 để tránh blur
+            double px = 0.5;
             double x0 = dimX + px;
             double y0 = dimTop + px;
             double y1 = dimBottom + px;
@@ -2223,13 +2234,13 @@ namespace RevitProjectDataAddin
                     StrokeThickness = 1,
                     SnapsToDevicePixels = true
                 };
-                RenderOptions.SetEdgeMode(ln, EdgeMode.Aliased); // sắc nét cho line 1px
+                RenderOptions.SetEdgeMode(ln, EdgeMode.Aliased);
                 return ln;
             }
 
-            canvas.Children.Add(MakeRedLine(x0 - 1, y0 - 1, x0 - 1, y1 - 1));    // dọc
-            canvas.Children.Add(MakeRedLine(xL - 1, y0 - 1, xR - 1, y0 - 1));    // ngang trên
-            canvas.Children.Add(MakeRedLine(xL - 1, y1 - 1, xR - 1, y1 - 1));    // ngang dưới
+            canvas.Children.Add(MakeRedLine(x0 - 1, y0 - 1, x0 - 1, y1 - 1));
+            canvas.Children.Add(MakeRedLine(xL - 1, y0 - 1, xR - 1, y0 - 1));
+            canvas.Children.Add(MakeRedLine(xL - 1, y1 - 1, xR - 1, y1 - 1));
 
             return canvas;
         }
@@ -3406,7 +3417,7 @@ namespace RevitProjectDataAddin
                         box.LostKeyboardFocus += (_, __) =>
                         {
                             if (box.Visibility == System.Windows.Visibility.Visible)
-                                TryCommitOrRefocus();
+                                EndEditShowPreview();
                         };
 
                         return rowHost;
@@ -3538,7 +3549,7 @@ namespace RevitProjectDataAddin
                         box.LostKeyboardFocus += (_, __) =>
                         {
                             if (box.Visibility == System.Windows.Visibility.Visible)
-                                TryCommitOrRefocus(closeAllAfterValid: false);
+                                EndEdit();
                         };
 
                         return rowHost;
@@ -3693,6 +3704,8 @@ namespace RevitProjectDataAddin
 
                     var inputBoxes = new List<TextBox>();
                     var autoBoxes = new List<TextBox>();
+                    var autoPreviewBackground = new SolidColorBrush(Color.FromRgb(255, 248, 214));
+                    var autoPreviewBorderBrush = new SolidColorBrush(Color.FromRgb(214, 190, 122));
 
                     for (int i = 1; i <= segments; i++)
                     {
@@ -3717,16 +3730,20 @@ namespace RevitProjectDataAddin
                             Padding = new Thickness(2, 0, 2, 0)
                         };
 
-                        AttachDimIntegerValidation(box, () => box.IsReadOnly ? Brushes.WhiteSmoke : Brushes.White);
-
                         if (i < segments)
                         {
+                            AttachDimIntegerValidation(box);
                             inputBoxes.Add(box);
                         }
                         else
                         {
                             box.IsReadOnly = true;
-                            box.Background = Brushes.WhiteSmoke;
+                            box.IsTabStop = false;
+                            box.Background = autoPreviewBackground;
+                            box.BorderBrush = autoPreviewBorderBrush;
+                            box.Foreground = Brushes.DarkSlateGray;
+                            box.FontWeight = FontWeights.SemiBold;
+                            box.ToolTip = "Automatically calculated remaining length";
                             autoBoxes.Add(box);
                         }
 
@@ -3740,18 +3757,60 @@ namespace RevitProjectDataAddin
                         Foreground = Brushes.Red,
                         TextWrapping = TextWrapping.Wrap
                     };
+                    var manualInputBackground = Brushes.White;
+                    var invalidInputBackground = Brushes.LightCoral;
 
                     //root.Children.Add(WithRowDivider(txtError));
 
-                    void ClearAutoBoxes()
+                    void SetAutoBoxes(double remaining)
                     {
+                        double safeRemaining = Math.Max(0.0, remaining);
+                        string previewText = Math.Round(safeRemaining, MidpointRounding.AwayFromZero).ToString("0");
                         foreach (var autoBox in autoBoxes)
-                            autoBox.Text = string.Empty;
+                            autoBox.Text = previewText;
+                    }
+
+                    void ResetInputBoxStates()
+                    {
+                        foreach (var inputBox in inputBoxes)
+                            inputBox.Background = manualInputBackground;
+                    }
+
+                    bool TryPreviewCurrentState(out double enteredSum, out TextBox invalidBox, out string validationMessage)
+                    {
+                        enteredSum = 0.0;
+                        invalidBox = null;
+                        validationMessage = string.Empty;
+
+                        foreach (var box in inputBoxes)
+                        {
+                            string raw = (box.Text ?? string.Empty).Trim();
+                            if (string.IsNullOrWhiteSpace(raw))
+                                continue;
+
+                            if (!int.TryParse(raw, out var value) || value <= 0)
+                            {
+                                invalidBox = box;
+                                validationMessage = "Please enter positive integers.";
+                                return false;
+                            }
+
+                            enteredSum += value;
+                            if (totalLength - enteredSum <= 0.0)
+                            {
+                                invalidBox = box;
+                                validationMessage = "Remaining length must stay positive.";
+                                return false;
+                            }
+                        }
+
+                        return true;
                     }
 
                     bool ValidateAndPreview(out List<double> lengths)
                     {
                         lengths = new List<double>();
+                        ResetInputBoxStates();
                         txtError.Text = string.Empty;
 
                         double enteredSum = 0.0;
@@ -3760,39 +3819,45 @@ namespace RevitProjectDataAddin
                             string raw = (box.Text ?? string.Empty).Trim();
                             if (string.IsNullOrWhiteSpace(raw))
                             {
-                                ClearAutoBoxes();
+                                RefreshValidation();
                                 return false;
                             }
 
                             if (!int.TryParse(raw, out var value) || value <= 0)
                             {
-                                ClearAutoBoxes();
-                                txtError.Text = "入力値を確認してください。";
+                                box.Background = invalidInputBackground;
+                                SetAutoBoxes(totalLength - enteredSum);
+                                txtError.Text = "Please enter positive integers.";
                                 return false;
                             }
 
                             lengths.Add(value);
                             enteredSum += value;
+                            if (totalLength - enteredSum <= 0.0)
+                            {
+                                box.Background = invalidInputBackground;
+                                SetAutoBoxes(0.0);
+                                txtError.Text = "Remaining length must stay positive.";
+                                return false;
+                            }
                         }
 
                         double remaining = totalLength - enteredSum;
                         double roundedRemaining = Math.Round(remaining, MidpointRounding.AwayFromZero);
 
+                        SetAutoBoxes(remaining);
+
                         if (roundedRemaining <= 0)
                         {
-                            ClearAutoBoxes();
-                            txtError.Text = "合計長さが元の長さを超えています。";
+                            txtError.Text = "Remaining length must stay positive.";
                             return false;
                         }
-
-                        foreach (var autoBox in autoBoxes)
-                            autoBox.Text = roundedRemaining.ToString("0");
 
                         lengths.Add(roundedRemaining);
 
                         if (Math.Abs(lengths.Sum() - totalLength) > 1.0)
                         {
-                            txtError.Text = "合計長さが一致しません。";
+                            txtError.Text = "Entered lengths do not match the segment length.";
                             return false;
                         }
 
@@ -3801,7 +3866,21 @@ namespace RevitProjectDataAddin
 
                     void RefreshValidation()
                     {
-                        ValidateAndPreview(out _);
+                        ResetInputBoxStates();
+                        txtError.Text = string.Empty;
+
+                        if (!TryPreviewCurrentState(out var enteredSum, out var invalidBox, out var validationMessage))
+                        {
+                            if (invalidBox != null)
+                                invalidBox.Background = invalidInputBackground;
+
+                            SetAutoBoxes(totalLength - enteredSum);
+                            txtError.Text = validationMessage;
+                            return;
+                        }
+
+                        double remaining = totalLength - enteredSum;
+                        SetAutoBoxes(remaining);
                     }
 
                     foreach (var box in inputBoxes)
