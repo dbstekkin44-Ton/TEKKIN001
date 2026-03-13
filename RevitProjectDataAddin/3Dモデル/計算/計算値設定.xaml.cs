@@ -132,7 +132,7 @@ namespace RevitProjectDataAddin
                         MessageBox.Show("Giá trị quá lớn!! (Chỉ cho phép tối đa 5 chữ số)", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                         e.Cancel = true;
                         textBox.Focus();
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         return;
 
                     }
@@ -323,31 +323,21 @@ namespace RevitProjectDataAddin
             // Kiểm tra nếu TextBox là một trong các TextBox cần bỏ qua sự kiện PreviewTextInput
             bool skipPreviewTextInput = textBox == TsuNaga1TextBox || textBox == TsuNaga2TextBox ||
                                          textBox == AnkaNagaHaraTextBox || textBox == NigeHaraTextBox;
-            void UpdateColors(Brush background) => textBox.Background = background;
-            void SetActiveColors() => UpdateColors(Brushes.LightGreen);
-            void SetInactiveColors() => UpdateColors(Brushes.White);
+            TextBoxValidationVisualHelper.Initialize(textBox);
 
-            // Thêm các sự kiện khác
             textBox.GotFocus += (s, e) =>
             {
-                // Tô màu khi TextBox được focus
-                SetActiveColors();
-
-                // Chọn toàn bộ nội dung trong TextBox
+                TextBoxValidationVisualHelper.Refresh(textBox);
                 textBox.SelectAll();
             };
             textBox.PreviewMouseDown += (s, e) =>
             {
-                // Đảm bảo TextBox không bị mất focus khi nhấp chuột
                 if (!textBox.IsFocused)
                 {
                     e.Handled = true;
                     textBox.Focus();
                 }
             };
-            textBox.LostFocus += (s, e) => SetInactiveColors();
-            textBox.MouseEnter += (s, e) => SetActiveColors();
-            textBox.MouseLeave += (s, e) => { if (!textBox.IsFocused) SetInactiveColors(); };
 
             // Chỉ thêm sự kiện PreviewTextInput nếu không nằm trong danh sách bỏ qua
             if (!skipPreviewTextInput)
@@ -359,7 +349,7 @@ namespace RevitProjectDataAddin
                         // Chỉ cho phép nhập số
                         if (!char.IsDigit(e.Text, 0))
                         {
-                            textBox1.Background = Brushes.LightCoral;
+                            TextBoxValidationVisualHelper.SetInvalid(textBox1);
                             e.Handled = true;
                             return;
                         }
@@ -371,7 +361,7 @@ namespace RevitProjectDataAddin
                         // Nếu chuỗi mới là "0" thì cho phép
                         if (newText == "0")
                         {
-                            textBox1.Background = Brushes.White;
+                            TextBoxValidationVisualHelper.SetValid(textBox1);
                             e.Handled = false;
                             return;
                         }
@@ -379,7 +369,7 @@ namespace RevitProjectDataAddin
                         // Nếu chuỗi mới có độ dài > 1 và bắt đầu bằng '0' thì không cho phép
                         if (newText.Length > 1 && newText.StartsWith("0"))
                         {
-                            textBox1.Background = Brushes.LightCoral;
+                            TextBoxValidationVisualHelper.SetInvalid(textBox1);
                             e.Handled = true;
                             return;
                         }
@@ -387,13 +377,13 @@ namespace RevitProjectDataAddin
                         // Nếu giá trị vượt quá 99999 hoặc vượt quá MaxLength thì không cho phép
                         if ((int.TryParse(newText, out int newValue) && newValue > 99999) || newText.Length > 5)
                         {
-                            textBox1.Background = Brushes.LightCoral;
+                            TextBoxValidationVisualHelper.SetInvalid(textBox1);
                             e.Handled = true;
                             return;
                         }
 
                         // Trường hợp hợp lệ
-                        textBox1.Background = Brushes.White;
+                        TextBoxValidationVisualHelper.SetValid(textBox1);
                         e.Handled = false;
                     }
                 };

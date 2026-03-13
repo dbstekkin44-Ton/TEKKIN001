@@ -3056,7 +3056,8 @@ namespace RevitProjectDataAddin
                             Padding = new Thickness(2, 0, 2, 0),
                             IsReadOnly = true,
                             BorderThickness = new Thickness(0),
-                            Background = Brushes.Transparent
+                            Background = Brushes.Transparent,
+                            FontSize = 14
                         };
                         AttachDimIntegerValidation(box, () => box.IsReadOnly ? Brushes.Transparent : Brushes.White);
                         Grid.SetColumn(box, side == AnkaSide.Left ? 0 : 2);
@@ -3128,15 +3129,35 @@ namespace RevitProjectDataAddin
 
                             // sau commit: về display mode + bỏ focus để caret tắt
                             SetDisplayMode();
+                            if (activeBox == box) activeBox = null;
+                            if (_activeAnkaBox == box)
+                            {
+                                _activeAnkaBox = null;
+                                _activeAnkaTryCommitOrRefocus = null;
+                            }
                             Keyboard.ClearFocus();
 
                             if (closeAllAfterValid) CloseAll();
                             return true;
                         }
 
+                        bool CancelEditWithoutCommit()
+                        {
+                            RefreshBoxFromCurrent();
+                            SetDisplayMode();
+                            if (activeBox == box) activeBox = null;
+                            if (_activeAnkaBox == box)
+                            {
+                                _activeAnkaBox = null;
+                                _activeAnkaTryCommitOrRefocus = null;
+                            }
+                            Keyboard.ClearFocus();
+                            return true;
+                        }
+
                         void ActivateEdit()
                         {
-                            // Nếu đang có box khác active, commit nó trước (nếu OK)
+                            // Nếu đang có box khác active, đóng edit cũ mà không commit
                             if (activeBox != null && activeBox != box)
                             {
                                 if (_activeAnkaTryCommitOrRefocus != null)
@@ -3150,9 +3171,8 @@ namespace RevitProjectDataAddin
 
                             _activeAnkaBox = box;
 
-                            // callback dùng cho hover/click-outside: KHÔNG tự đóng menu ở đây
-                            // (Enter sẽ đóng menu trực tiếp)
-                            _activeAnkaTryCommitOrRefocus = () => TryCommitOrRefocus(closeAllAfterValid: false);
+                            // Hover/click-outside chỉ hủy edit chưa xác nhận, không commit.
+                            _activeAnkaTryCommitOrRefocus = CancelEditWithoutCommit;
 
                             SetEditMode();
                             FocusBoxSelectAll();
@@ -3203,9 +3223,7 @@ namespace RevitProjectDataAddin
                             else if (ee.Key == Key.Escape)
                             {
                                 // Esc: revert và tắt caret (không đóng menu)
-                                RefreshBoxFromCurrent();
-                                SetDisplayMode();
-                                Keyboard.ClearFocus();
+                                CancelEditWithoutCommit();
                                 ee.Handled = true;
                             }
                         };
@@ -3218,9 +3236,8 @@ namespace RevitProjectDataAddin
                                 return;
                             }
 
-                            // mất focus: commit nếu hợp lệ (không đóng menu)
                             if (!box.IsReadOnly)
-                                TryCommitOrRefocus(closeAllAfterValid: false);
+                                CancelEditWithoutCommit();
                         };
 
                         return rowHost;
@@ -3753,7 +3770,7 @@ namespace RevitProjectDataAddin
 
                     var txtError = new TextBlock
                     {
-                        Margin = new Thickness(10, -17, 10,-17),
+                        Margin = new Thickness(10, -17, 10, -17),
                         Foreground = Brushes.Red,
                         TextWrapping = TextWrapping.Wrap
                     };
@@ -3986,7 +4003,11 @@ namespace RevitProjectDataAddin
                         }
                     }
 
-                    txtSegments.TextChanged += (_, __) => TryOpenCustomDetail();
+                    txtSegments.TextChanged += (_, __) =>
+                    {
+                        if (isCustom && cutDetailPop != null)
+                            cutDetailPop.IsOpen = false;
+                    };
                     txtSegments.KeyDown += (_, ee) =>
                     {
                         if (ee.Key == Key.Enter)

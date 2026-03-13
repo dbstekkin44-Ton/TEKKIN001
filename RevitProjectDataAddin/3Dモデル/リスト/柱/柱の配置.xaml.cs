@@ -97,7 +97,7 @@ namespace RevitProjectDataAddin
                     MessageBox.Show("「-」と「.」は隣り合って入力できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     e.Cancel = true;
                     textBox.Focus();
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     return;
                 }
                 // Loại bỏ dấu '-' đầu để kiểm tra độ dài
@@ -111,11 +111,11 @@ namespace RevitProjectDataAddin
                             ? "入力値が大きすぎます。（小数点を含め最大10文字までです）"
                             : "入力値が大きすぎます。（最大5文字までです）",
                         "エラー",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                     e.Cancel = true;
                     textBox.Focus();
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     return;
                 }
 
@@ -125,7 +125,7 @@ namespace RevitProjectDataAddin
                     MessageBox.Show("有効な小数値のみ入力できます。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     e.Cancel = true;
                     textBox.Focus();
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     return;
                 }
 
@@ -135,7 +135,7 @@ namespace RevitProjectDataAddin
                     MessageBox.Show("入力値が99999を超えています。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                     e.Cancel = true;
                     textBox.Focus();
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     return;
                 }
             }
@@ -220,31 +220,21 @@ namespace RevitProjectDataAddin
         }
         public void SetupTextBoxKha(TextBox textBox)
         {
-            void UpdateColors(Brush background) => textBox.Background = background;
-            void SetActiveColors() => UpdateColors(Brushes.LightGreen);
-            void SetInactiveColors() => UpdateColors(Brushes.White);
+            TextBoxValidationVisualHelper.Initialize(textBox);
 
-            // Thêm các sự kiện khác
             textBox.GotFocus += (s, e) =>
             {
-                // Tô màu khi TextBox được focus
-                SetActiveColors();
-
-                // Chọn toàn bộ nội dung trong TextBox
+                TextBoxValidationVisualHelper.Refresh(textBox);
                 textBox.SelectAll();
             };
             textBox.PreviewMouseDown += (s, e) =>
             {
-                // Đảm bảo TextBox không bị mất focus khi nhấp chuột
                 if (!textBox.IsFocused)
                 {
                     e.Handled = true;
                     textBox.Focus();
                 }
             };
-            textBox.LostFocus += (s, e) => SetInactiveColors();
-            textBox.MouseEnter += (s, e) => SetActiveColors();
-            textBox.MouseLeave += (s, e) => { if (!textBox.IsFocused) SetInactiveColors(); };
         }
         private bool IsAllowNegativeTextBox(TextBox textBox)
         {
@@ -265,7 +255,14 @@ namespace RevitProjectDataAddin
                 int nakagoVal = int.TryParse(nakago.Text, out int n) ? n : 0;
                 int upperVal = int.TryParse(upper.Text, out int u) ? u : 0;
                 bool valid = nakagoVal <= upperVal;
-                nakago.Background = valid ? Brushes.White : Brushes.LightCoral;
+                if (valid)
+                {
+                    TextBoxValidationVisualHelper.SetValid(nakago);
+                }
+                else
+                {
+                    TextBoxValidationVisualHelper.SetInvalid(nakago);
+                }
                 return valid;
             }
 
@@ -294,13 +291,13 @@ namespace RevitProjectDataAddin
                     // Only allow '-' as the first character and not already present
                     if (textBox.SelectionStart == 0 && !textBox.Text.StartsWith("-"))
                     {
-                        textBox.Background = Brushes.White;
+                        TextBoxValidationVisualHelper.SetValid(textBox);
                         e.Handled = false;
                         return;
                     }
                     else
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -309,7 +306,7 @@ namespace RevitProjectDataAddin
                 // Cho phép số và dấu chấm (.)
                 if (!char.IsDigit(inputChar) && inputChar != '.')
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -321,7 +318,7 @@ namespace RevitProjectDataAddin
                 // Prevent '-' and '.' being adjacent (e.g., '-.012' or '.-012')
                 if (newText.Contains("-.") || newText.Contains(".-"))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -331,7 +328,7 @@ namespace RevitProjectDataAddin
                     // Only one '-' at the start
                     if (newText.Count(c => c == '-') > 1 || (newText.IndexOf('-') > 0))
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -341,7 +338,7 @@ namespace RevitProjectDataAddin
                     // Not allowed to have '-'
                     if (newText.Contains('-'))
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -350,7 +347,7 @@ namespace RevitProjectDataAddin
                 // Không cho phép nhiều hơn một dấu chấm
                 if (newText.Count(c => c == '.') > 1)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -358,7 +355,7 @@ namespace RevitProjectDataAddin
                 // Không cho phép bắt đầu bằng dấu chấm
                 if (newText.StartsWith("."))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -367,7 +364,7 @@ namespace RevitProjectDataAddin
                 string checkText = newText.StartsWith("-") ? newText.Substring(1) : newText;
                 if (newText.Length > 1 && newText.StartsWith("0") && newText[1] != '.')
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -375,7 +372,7 @@ namespace RevitProjectDataAddin
                 // Kiểm tra độ dài tối đa (n ký tự, có thể điều chỉnh nếu cần)
                 if (newText.Length > 10)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -383,13 +380,13 @@ namespace RevitProjectDataAddin
                 // Kiểm tra giá trị tối đa (99999)
                 if (double.TryParse(newText, out double newValue) && newValue > 99999 || newValue < -99999)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
 
                 // Trường hợp hợp lệ
-                textBox.Background = Brushes.White;
+                TextBoxValidationVisualHelper.SetValid(textBox);
                 e.Handled = false;
             }
         }

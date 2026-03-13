@@ -113,6 +113,7 @@
     <Compile Include="Config\ProjectData.cs" />
     <Compile Include="Config\PathAccessor.cs" />
     <Compile Include="Config\ProjectManager.cs" />
+    <Compile Include="Config\TextBoxValidationVisualHelper.cs" />
     <Compile Include="Config\ProjectSelectionWindow.xaml.cs">
       <DependentUpon>ProjectSelectionWindow.xaml</DependentUpon>
     </Compile>

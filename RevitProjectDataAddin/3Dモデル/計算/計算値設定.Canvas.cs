@@ -2256,12 +2256,11 @@ namespace RevitProjectDataAddin
             // Hàm cập nhật màu
             void UpdateColors(Brush background, Brush stroke)
             {
-                // Ép buộc cập nhật màu
                 textBox.Dispatcher.Invoke(() =>
                 {
-                    textBox.Background = background;
-                    textBox.ClearValue(Control.BackgroundProperty); // Xóa giá trị mặc định nếu có
-                    textBox.Background = background; // Áp dụng lại
+                    textBox.Background = Brushes.White;
+                    textBox.BorderBrush = Brushes.Black;
+                    textBox.BorderThickness = new Thickness(1.0);
                     foreach (var line in lines)
                     {
                         line.Stroke = stroke;
@@ -3583,9 +3582,9 @@ namespace RevitProjectDataAddin
             {
                 textBox.Dispatcher.Invoke(() =>
                 {
-                    textBox.Background = background;
-                    textBox.ClearValue(Control.BackgroundProperty); // Xóa giá trị mặc định nếu có
-                    textBox.Background = background; // Áp dụng lại
+                    textBox.Background = Brushes.White;
+                    textBox.BorderBrush = Brushes.Black;
+                    textBox.BorderThickness = new Thickness(1.0);
                     foreach (var shape in shapes)
                     {
                         shape.Stroke = stroke;
@@ -3692,12 +3691,11 @@ namespace RevitProjectDataAddin
             // Hàm cập nhật màu
             void UpdateColors(Brush background, Brush stroke)
             {
-                // Ép buộc cập nhật màu
                 textBox.Dispatcher.Invoke(() =>
                 {
-                    textBox.Background = background;
-                    textBox.ClearValue(Control.BackgroundProperty); // Xóa giá trị mặc định nếu có
-                    textBox.Background = background; // Áp dụng lại
+                    textBox.Background = Brushes.White;
+                    textBox.BorderBrush = Brushes.Black;
+                    textBox.BorderThickness = new Thickness(1.0);
                     foreach (var line in lines)
                     {
                         line.Stroke = stroke;
@@ -4767,9 +4765,9 @@ namespace RevitProjectDataAddin
             {
                 textBox.Dispatcher.Invoke(() =>
                 {
-                    textBox.Background = background;
-                    textBox.ClearValue(Control.BackgroundProperty);
-                    textBox.Background = background;
+                    textBox.Background = Brushes.White;
+                    textBox.BorderBrush = Brushes.Black;
+                    textBox.BorderThickness = new Thickness(1.0);
                 });
 
                 if (drawLines)

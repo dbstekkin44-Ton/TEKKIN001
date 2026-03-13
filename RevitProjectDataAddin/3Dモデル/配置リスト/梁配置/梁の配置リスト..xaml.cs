@@ -302,13 +302,13 @@ namespace RevitProjectDataAddin
                     // Only allow '-' as the first character and not already present
                     if (textBox.SelectionStart == 0 && !textBox.Text.StartsWith("-"))
                     {
-                        textBox.Background = Brushes.White;
+                        TextBoxValidationVisualHelper.SetValid(textBox);
                         e.Handled = false;
                         return;
                     }
                     else
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -317,7 +317,7 @@ namespace RevitProjectDataAddin
                 // Cho phép số và dấu chấm (.)
                 if (!char.IsDigit(inputChar) && inputChar != '.')
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -329,7 +329,7 @@ namespace RevitProjectDataAddin
                 // Prevent '-' and '.' being adjacent (e.g., '-.012' or '.-012')
                 if (newText.Contains("-.") || newText.Contains(".-"))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -339,7 +339,7 @@ namespace RevitProjectDataAddin
                     // Only one '-' at the start
                     if (newText.Count(c => c == '-') > 1 || (newText.IndexOf('-') > 0))
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -349,7 +349,7 @@ namespace RevitProjectDataAddin
                     // Not allowed to have '-'
                     if (newText.Contains('-'))
                     {
-                        textBox.Background = Brushes.LightCoral;
+                        TextBoxValidationVisualHelper.SetInvalid(textBox);
                         e.Handled = true;
                         return;
                     }
@@ -358,7 +358,7 @@ namespace RevitProjectDataAddin
                 // Không cho phép nhiều hơn một dấu chấm
                 if (newText.Count(c => c == '.') > 1)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -366,7 +366,7 @@ namespace RevitProjectDataAddin
                 // Không cho phép bắt đầu bằng dấu chấm
                 if (newText.StartsWith("."))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -375,7 +375,7 @@ namespace RevitProjectDataAddin
                 string checkText = newText.StartsWith("-") ? newText.Substring(1) : newText;
                 if (newText.Length > 1 && newText.StartsWith("0") && newText[1] != '.')
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -383,7 +383,7 @@ namespace RevitProjectDataAddin
                 // Kiểm tra độ dài tối đa (n ký tự, có thể điều chỉnh nếu cần)
                 if (newText.Length > 10)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -391,13 +391,13 @@ namespace RevitProjectDataAddin
                 // Kiểm tra giá trị tối đa (99999)
                 if (double.TryParse(newText, out double newValue) && newValue > 99999 || newValue < -99999)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
 
                 // Trường hợp hợp lệ
-                textBox.Background = Brushes.White;
+                TextBoxValidationVisualHelper.SetValid(textBox);
                 e.Handled = false;
             }
         }
@@ -434,54 +434,22 @@ namespace RevitProjectDataAddin
         }
         private void SetupTextBoxKha(TextBox textBox)
         {
-            void UpdateColors(Brush background)
-            {
-                textBox.Background = background;
-            }
-
-            void SetActiveColors()
-            {
-                UpdateColors(Brushes.LightGreen);
-            }
-
-            void SetInactiveColors()
-            {
-                UpdateColors(Brushes.White);
-            }
+            TextBoxValidationVisualHelper.Initialize(textBox);
 
             textBox.GotFocus += (s, e) =>
             {
-                // Tô màu khi TextBox được focus
-                SetActiveColors();
-
-                // Chọn toàn bộ nội dung trong TextBox
+                TextBoxValidationVisualHelper.Refresh(textBox);
                 textBox.SelectAll();
             };
 
             textBox.PreviewMouseDown += (s, e) =>
             {
-                // Đảm bảo TextBox không bị mất focus khi nhấp chuột
                 if (!textBox.IsFocused)
                 {
                     e.Handled = true;
                     textBox.Focus();
                 }
             };
-
-            textBox.LostFocus += (s, e) =>
-            {
-                // Khôi phục màu nền mặc định khi TextBox mất focus
-                SetInactiveColors();
-            };
-
-            textBox.MouseLeave += (s, e) =>
-            {
-                if (!textBox.IsFocused)
-                {
-                    SetInactiveColors();
-                }
-            };
-            textBox.MouseEnter += (s, e) => SetActiveColors();
         }
     }
 }

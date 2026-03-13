@@ -250,7 +250,7 @@ namespace RevitProjectDataAddin
                 // Chỉ cho phép nhập số
                 if (!char.IsDigit(e.Text, 0))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -262,7 +262,7 @@ namespace RevitProjectDataAddin
                 // Nếu chuỗi mới là "0" thì cho phép
                 if (newText == "0")
                 {
-                    textBox.Background = Brushes.White;
+                    TextBoxValidationVisualHelper.SetValid(textBox);
                     e.Handled = false;
                     return;
                 }
@@ -270,7 +270,7 @@ namespace RevitProjectDataAddin
                 // Nếu chuỗi mới có độ dài > 1 và bắt đầu bằng '0' thì không cho phép
                 if (newText.Length > 1 && newText.StartsWith("0"))
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
@@ -278,13 +278,13 @@ namespace RevitProjectDataAddin
                 // Nếu giá trị vượt quá 99999 hoặc vượt quá MaxLength thì không cho phép
                 if ((int.TryParse(newText, out int newValue) && newValue > 99999) || newText.Length > 5)
                 {
-                    textBox.Background = Brushes.LightCoral;
+                    TextBoxValidationVisualHelper.SetInvalid(textBox);
                     e.Handled = true;
                     return;
                 }
 
                 // Trường hợp hợp lệ
-                textBox.Background = Brushes.White;
+                TextBoxValidationVisualHelper.SetValid(textBox);
                 e.Handled = false;
             }
         }
@@ -322,54 +322,22 @@ namespace RevitProjectDataAddin
         }
         private void SetupTextBoxKha(TextBox textBox)
         {
-            void UpdateColors(Brush background)
-            {
-                textBox.Background = background;
-            }
-
-            void SetActiveColors()
-            {
-                UpdateColors(Brushes.LightGreen);
-            }
-
-            void SetInactiveColors()
-            {
-                UpdateColors(Brushes.White);
-            }
+            TextBoxValidationVisualHelper.Initialize(textBox);
 
             textBox.GotFocus += (s, e) =>
             {
-                // Tô màu khi TextBox được focus
-                SetActiveColors();
-
-                // Chọn toàn bộ nội dung trong TextBox
+                TextBoxValidationVisualHelper.Refresh(textBox);
                 textBox.SelectAll();
             };
 
             textBox.PreviewMouseDown += (s, e) =>
             {
-                // Đảm bảo TextBox không bị mất focus khi nhấp chuột
                 if (!textBox.IsFocused)
                 {
                     e.Handled = true;
                     textBox.Focus();
                 }
             };
-
-            textBox.LostFocus += (s, e) =>
-            {
-                // Khôi phục màu nền mặc định khi TextBox mất focus
-                SetInactiveColors();
-            };
-
-            textBox.MouseLeave += (s, e) =>
-            {
-                if (!textBox.IsFocused)
-                {
-                    SetInactiveColors();
-                }
-            };
-            textBox.MouseEnter += (s, e) => SetActiveColors();
         }
 
     }
